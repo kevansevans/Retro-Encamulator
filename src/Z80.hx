@@ -9,16 +9,31 @@ import haxe.Constraints.Function;
  * made following tutorial: http://imrannazar.com/GameBoy-Emulation-in-JavaScript:-The-CPU
  * 
  */
+enum abstract Register(Int) from Int {
+	var a:Int;
+	var b:Int;
+	var c:Int;
+	var d:Int;
+	var e:Int;
+	var f:Int;
+	var h:Int;
+	var l:Int;
+	var pc:Int;
+	var sp:Int;
+	var t:Int;
+	var m:Int;
+}
 class Z80 
 {
 	var _clock:Clock;
-	var _register:Register;
+	var _register:Array<Int>;
 	var _meminter:MemoryInterface;
 	var _map:Map<Int, Function>;
+	var temp_mem:Array<Int> = [0x03];
 	public function new() 
 	{
 		_clock = new Clock();
-		_register = new Register();
+		_register = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
 		_meminter = new MemoryInterface();
 		write_map_table();
 		run();
@@ -26,62 +41,37 @@ class Z80
 	function run() 
 	{
 		while (true) {
-			var op = _meminter.read_byte(++_register.pc);
+			var op = _meminter.read_byte(++_register[Register.pc]);
 			_map[op]();
-			_register.pc &= 65535;
-			_clock.m += _register.m;
-			_clock.t += _register.t;
+			_register[Register.pc] &= 65535;
+			_clock.m += _register[Register.m];
+			_clock.t += _register[Register.t];
+			trace(_register[Register.a], _register[Register.b], _register[Register.c], _register[Register.d], _register[Register.e], _register[Register.f], _register[Register.h], _register[Register.l], _register[Register.pc], _register[Register.sp], _register[Register.t], _register[Register.m]);
 		}
 	}
-	//Add E to A, result is A = A + E
-	public function addr_e() {
-		_register.a += _register.e;							//perform addition
-		_register.f = 0;									//clear flags
-		if ((_register.a & 255) == 0) _register.f |= 0x80;	//check for zero
-		if (_register.a > 255) _register.f |= 0x10;			//check for carry
-		_register.a &= 255;									//mask to 8 bits
-		_register.m = 1; _register.t = 4;					//1 m-time taken
-	}
-	//compare A to B, setthing flags CP A, B
-	public function cpr_b() {
-		var i = _register.a;								//Temp copy A
-		i -= _register.b;									//Subtract b
-		_register.f |= 0x40;								//Set subtraction flag
-		if ((i & 255) == 0) _register.f |= 0x80;			//check for zero
-		if (i < 0) _register.f |= 0x10;						//check for underflow
-		_register.m = 1; _register.t = 4;					//one m time
-	}	
-	//no operation
 	public function nop() {
-		_register.m = 1; _register.t = 4;					//1 m time
-	}
-	//Push registers B and C to the stack
-	public function pushbc() {
-		--_register.sp;										//Drop through the stack
-		_meminter.write_byte(_register.sp, _register.b);	//Write B
-		--_register.sp;										//Drop through the stack
-		_meminter.write_byte(_register.sp, _register.c);	//Write C
-		_register.m = 3; _register.t = 12;					//3 m time
-	}
-	//pop registers H and L off the stach
-	public function pophl() {								
-		_register.l = _meminter.read_byte(_register.sp);	//Read L
-		++_register.sp;										//Move up the stack
-		_register.h = _meminter.read_byte(_register.sp);	//Read H
-		++_register.sp;										//Move up the stack
-		_register.m = 3; _register.t = 12;					//3 m time
-	}
-	//Read a byte from absolute location into A
-	public function ldamm() {								
-		_register.l = _meminter.read_byte(_register.sp);	//Read L
-		++_register.sp;										//Move back up stack
-		_register.h - _meminter.read_byte(_register.sp);	//Read H
-		++_register.sp;										//Move back up stack
-		_register.m = 3; _register.t = 12;					//3 m time
+		_register[Register.m] = 1; _register[Register.t] = 4;
 	}
 	public function reset() {
 		_clock = new Clock();
-		_register = new Register();
+		_register = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+	}
+	//Abstracted functions
+	public function inc(_a:Int, ?_b:Int) {
+		_register[_a] += 1;
+		if (_b != null) _register[_b] += 1;
+		if (_b != null) m_time(6);
+		else m_time(4);
+	}
+	public function dec(_a:Int, ?_b:Int) {
+		_register[_a] -= 1;
+		if (_b != null) _register[_b] -= 1;
+		if (_b != null) m_time(6);
+		else m_time(4);
+	}
+	function m_time(_v:Int) {
+		_register[Register.m] = _v;
+		_register[Register.t] = _v * 4;
 	}
 	function write_map_table() 
 	{
@@ -89,7 +79,7 @@ class Z80
 		_map[0x00] = nop; //No operation
 		_map[0x01] = nop;
 		_map[0x02] = nop;
-		_map[0x03] = nop;
+		_map[0x03] = inc.bind(Register.b, Register.c); //incriment B and C
 		_map[0x04] = nop;
 		_map[0x05] = nop;
 		_map[0x06] = nop;
@@ -330,27 +320,12 @@ class Z80
 }
 class MemoryInterface {
 	public function new() {}
-	public function read_byte(_addr):Int {return 0; }
+	public function read_byte(_addr):Int {return 0x03; }
 	public function read_word(_addr):Int {return 0; }
 	public function write_byte(_addr, _value) {}
 	public function write_word(_addr, _value) {}
 }
 class Clock {
-	public var m:Int = 0;
-	public var t:Int = 0;
-	public function new () {}
-}
-class Register {
-	public var a:Int = 0;
-	public var b:Int = 0;
-	public var c:Int = 0;
-	public var d:Int = 0;
-	public var e:Int = 0;
-	public var h:Int = 0;
-	public var l:Int = 0;
-	public var f:Int = 0;
-	public var pc:Int = 0;
-	public var sp:Int = 0;
 	public var m:Int = 0;
 	public var t:Int = 0;
 	public function new () {}
