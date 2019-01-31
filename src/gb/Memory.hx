@@ -72,10 +72,10 @@ class Memory {
 					case 0x000 | 0x100 | 0x200 | 0x300 | 0x400 | 0x500 | 0x600 | 0x700 | 0x800 | 0x900 | 0xA00 | 0xB00 | 0xC00 | 0xD00 :
 						return _wram[_addr & 0x1FFF];
 					case 0xE00 :
-						trace("I need a GPU here!")
+						trace("I need a GPU here!");
 						return 0;
 					case 0xF00 :
-						if (_addr = 0xFFFF) return _ie;
+						if (_addr == 0xFFFF) return _ie;
 						else if (_addr > 0xFF7F) return _zram[_addr & 0x7F];
 						else {
 							switch (_addr & 0xF0) {
@@ -87,7 +87,16 @@ class Memory {
 										case 4 | 5 | 6 | 7 :
 											trace("timer here");
 											return 0;
+										case 15 :
+											return _if;
+										default :
+											return 0; //actually needed default
 									}
+								case 0x10 | 0x20 | 0x30 :
+									return 0;
+								case 0x40 | 0x50 | 0x60 | 0x70 :
+									trace("New gpu who dis?");
+									return 0;
 							}
 						}
 				}
