@@ -63,6 +63,15 @@ class Z80
 			m_time(3, 11);
 		}
 	}
+	//increase value at location of HL
+	function inc_hl() {
+		var hl = (_register[Register.h] << 8) + _register[Register.l];
+		var i = _meminter.read_byte(hl) + 1;
+		i &= 255;
+		_meminter.write_byte(hl, i);
+		_register[Register.f] = i == 0 ? 0 : 0x80;
+		m_time(3, 11);
+	}
 	//decrease register by 1. Can handle 16 bit register
 	function dec(_high:Int, ?_low:Int) {
 		if (_low == null) {
@@ -76,6 +85,15 @@ class Z80
 			_register[_low] = _word & 0xFF;
 			m_time(3, 11);
 		}
+	}
+	//increase value at location of HL
+	function dec_hl() {
+		var hl = (_register[Register.h] << 8) + _register[Register.l];
+		var i = _meminter.read_byte(hl) - 1;
+		i &= 255;
+		_meminter.write_byte(hl, i);
+		_register[Register.f] = i == 0 ? 0 : 0x80;
+		m_time(3, 11);
 	}
 	//Load content of b into a
 	function load_rr(_regA:Int, _regB:Int) {
@@ -131,8 +149,8 @@ class Z80
 	function write_map_table() 
 	{
 		_map[0x00] = nop; //No operation
-		_map[0x01] = nop;
-		_map[0x02] = nop;
+		_map[0x01] = nop; // ld bc, nn
+		_map[0x02] = nop; // ld (bc), a
 		_map[0x03] = inc.bind(Register.b, Register.c); //incriment BC
 		_map[0x04] = inc.bind(Register.b); //Incriment B
 		_map[0x05] = dec.bind(Register.b); //decrease B
@@ -149,49 +167,49 @@ class Z80
 		_map[0x10] = nop;
 		_map[0x11] = nop;
 		_map[0x12] = nop;
-		_map[0x13] = nop;
-		_map[0x14] = nop;
-		_map[0x15] = nop;
+		_map[0x13] = inc.bind(Register.d, Register.e);
+		_map[0x14] = inc.bind(Register.d);
+		_map[0x15] = dec.bind(Register.d);
 		_map[0x16] = nop;
 		_map[0x17] = nop;
 		_map[0x18] = nop;
 		_map[0x19] = nop;
 		_map[0x1A] = nop;
-		_map[0x1B] = nop;
-		_map[0x1C] = nop;
-		_map[0x1D] = nop;
+		_map[0x1B] = dec.bind(Register.d, Register.e);
+		_map[0x1C] = inc.bind(Register.e);
+		_map[0x1D] = dec.bind(Register.e);
 		_map[0x1E] = nop;
 		_map[0x1F] = nop;
 		_map[0x20] = nop;
 		_map[0x21] = nop;
 		_map[0x22] = nop;
-		_map[0x23] = nop;
-		_map[0x24] = nop;
-		_map[0x25] = nop;
+		_map[0x23] = inc.bind(Register.h, Register.l);
+		_map[0x24] = inc.bind(Register.h);
+		_map[0x25] = dec.bind(Register.h);
 		_map[0x26] = nop;
 		_map[0x27] = nop;
 		_map[0x28] = nop;
 		_map[0x29] = nop;
 		_map[0x2A] = nop;
-		_map[0x2B] = nop;
-		_map[0x2C] = nop;
-		_map[0x2D] = nop;
+		_map[0x2B] = dec.bind(Register.h, Register.l);
+		_map[0x2C] = inc.bind(Register.l);
+		_map[0x2D] = dec.bind(Register.l);
 		_map[0x2E] = nop;
 		_map[0x2F] = nop;
 		_map[0x30] = nop;
 		_map[0x31] = nop;
 		_map[0x32] = nop;
-		_map[0x33] = nop;
-		_map[0x34] = nop;
-		_map[0x35] = nop;
+		_map[0x33] = inc.bind(Register.sp);
+		_map[0x34] = inc_hl;
+		_map[0x35] = dec_hl;
 		_map[0x36] = nop;
 		_map[0x37] = nop;
 		_map[0x38] = nop;
 		_map[0x39] = nop;
 		_map[0x3A] = nop;
-		_map[0x3B] = nop;
-		_map[0x3C] = nop;
-		_map[0x3D] = nop;
+		_map[0x3B] = dec.bind(Register.sp);
+		_map[0x3C] = inc.bind(Register.a);
+		_map[0x3D] = dec.bind(Register.a);
 		_map[0x3E] = nop;
 		_map[0x3F] = nop;
 		_map[0x40] = nop;
