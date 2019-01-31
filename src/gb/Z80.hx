@@ -33,7 +33,9 @@ class Z80
 			_register[Register.pc] &= 65535;
 			_clock.m += _register[Register.m];
 			_clock.t += _register[Register.t];
-			//trace(_register[Register.a], _register[Register.b], _register[Register.c], _register[Register.d], _register[Register.e], _register[Register.f], _register[Register.h], _register[Register.l], _register[Register.pc], _register[Register.sp], _register[Register.t], _register[Register.m]);
+			#if debug
+			trace(_register[Register.a], _register[Register.b], _register[Register.c], _register[Register.d], _register[Register.e], _register[Register.f], _register[Register.h], _register[Register.l], _register[Register.pc], _register[Register.sp], _register[Register.t], _register[Register.m]);
+			#end
 		}
 	}
 	function nop() {
