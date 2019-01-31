@@ -14,6 +14,8 @@ class Z80
 {
 	public static var _clock:Clock;
 	public static var _register:Array<Int>;
+	var op:Int;
+	var ignore_false_nop = #if debug true #else false #end;
 	var _meminter:Memory;
 	var _map:Map<Int, Function> = new Map();
 	public function new() 
@@ -34,11 +36,12 @@ class Z80
 			_clock.m += _register[Register.m];
 			_clock.t += _register[Register.t];
 			#if debug
-			trace(_register[Register.a], _register[Register.b], _register[Register.c], _register[Register.d], _register[Register.e], _register[Register.f], _register[Register.h], _register[Register.l], _register[Register.pc], _register[Register.sp], _register[Register.t], _register[Register.m]);
+			trace(op, _register[Register.a], _register[Register.b], _register[Register.c], _register[Register.d], _register[Register.e], _register[Register.f], _register[Register.h], _register[Register.l], _register[Register.pc], _register[Register.sp], _register[Register.t], _register[Register.m]);
 			#end
 		}
 	}
 	function nop() {
+		if (op != 0 && !ignore_false_nop) throw "Op code not set, please check: " + StringTools.hex(op);
 		_register[Register.m] = 1; _register[Register.t] = 4;
 	}
 	function m_time(_m:Int, _t:Int) {
