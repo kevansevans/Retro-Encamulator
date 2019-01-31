@@ -6,7 +6,11 @@ package gb;
  */
 class Memory {
 	var _inbios:Bool = true;
+	var _ie:Int = 0;
+	var _if:Int = 0;
 	var _rom:String = "";
+	var _romoffset = 0x4000;
+	var _ramoffset = 0;
 	var _carttype:Int = 0;
 	var _eram:Map<Int, Int> = new Map();
 	var _wram:Map<Int, Int> = new Map();
@@ -36,6 +40,7 @@ class Memory {
 	}
 	public function read_byte(_addr:Int):Int {
 		switch(_addr & 0xF000) {
+			//rom bank 0
 			case 0x0000 :
 				if (_inbios) {
 					if (_addr < 0x0100) return _bios[_addr];
@@ -44,17 +49,48 @@ class Memory {
 						trace("Leaving Bios");
 					}
 				} else {
-					var code = _rom.charCodeAt(_addr);
-					if (code == null) code = 0;
-					return code;
+					return _rom.charCodeAt(_addr);
 				}
 			case 0x1000 | 0x2000 | 0x3000 :
-				var code = _rom.charCodeAt(_addr);
-				if (code == null) code = 0;
-				return code;
+				return _rom.charCodeAt(_addr);
+			//rom bank 1
 			case 0x4000 | 0x5000 | 0x6000 | 0x7000 :
+				return _rom.charCodeAt(_romoffset + (_addr & 0x3FFF));
+			//vram	
+			case 0x8000 | 0x9000 :
 				trace("I don't have a GPU yet!");
 				return 0;
+			//external ram
+			case 0xA000 | 0xB000 :
+				return _eram[_ramoffset + (_addr & 0x1FFF)];
+			//Work ram and Echo
+			case 0xC000 | 0xD000 | 0xE000 :
+				return _wram[_addr & 0x1FFF];
+			//Everything else
+			case 0xF000 :
+				switch (_addr & 0x0F00) {
+					case 0x000 | 0x100 | 0x200 | 0x300 | 0x400 | 0x500 | 0x600 | 0x700 | 0x800 | 0x900 | 0xA00 | 0xB00 | 0xC00 | 0xD00 :
+						return _wram[_addr & 0x1FFF];
+					case 0xE00 :
+						trace("I need a GPU here!")
+						return 0;
+					case 0xF00 :
+						if (_addr = 0xFFFF) return _ie;
+						else if (_addr > 0xFF7F) return _zram[_addr & 0x7F];
+						else {
+							switch (_addr & 0xF0) {
+								case 0x00 :
+									switch (_addr & 0xF) {
+										case 0 :
+											trace("Joypad here");
+											return 0;
+										case 4 | 5 | 6 | 7 :
+											trace("timer here");
+											return 0;
+									}
+							}
+						}
+				}
 			default :
 				trace("Fix me!", _addr);
 				return 0;
