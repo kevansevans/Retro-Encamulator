@@ -1,6 +1,7 @@
-package;
+package gb;
 
 import haxe.Constraints.Function;
+import gb.Register;
 
 /**
  * ...
@@ -9,32 +10,17 @@ import haxe.Constraints.Function;
  * made following tutorial: http://imrannazar.com/GameBoy-Emulation-in-JavaScript:-The-CPU
  * 
  */
-enum abstract Register(Int) from Int {
-	var a:Int;
-	var b:Int;
-	var c:Int;
-	var d:Int;
-	var e:Int;
-	var f:Int;
-	var h:Int;
-	var l:Int;
-	var pc:Int;
-	var sp:Int;
-	var t:Int;
-	var m:Int;
-}
 class Z80 
 {
-	var _clock:Clock;
-	var _register:Array<Int>;
-	var _meminter:MemoryInterface;
-	var _map:Map<Int, Function>;
-	var temp_mem:Array<Int> = [0x03];
+	public static var _clock:Clock;
+	public static var _register:Array<Int>;
+	var _meminter:Memory;
+	var _map:Map<Int, Function> = new Map();
 	public function new() 
 	{
 		_clock = new Clock();
 		_register = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
-		_meminter = new MemoryInterface();
+		_meminter = new Memory();
 		write_map_table();
 		run();
 	}
@@ -42,54 +28,120 @@ class Z80
 	{
 		while (true) {
 			var op = _meminter.read_byte(++_register[Register.pc]);
+			if (_map[op] == null) throw "Null function pointer at: " + op; //take this out when needed
 			_map[op]();
 			_register[Register.pc] &= 65535;
 			_clock.m += _register[Register.m];
 			_clock.t += _register[Register.t];
-			trace(_register[Register.a], _register[Register.b], _register[Register.c], _register[Register.d], _register[Register.e], _register[Register.f], _register[Register.h], _register[Register.l], _register[Register.pc], _register[Register.sp], _register[Register.t], _register[Register.m]);
+			//trace(_register[Register.a], _register[Register.b], _register[Register.c], _register[Register.d], _register[Register.e], _register[Register.f], _register[Register.h], _register[Register.l], _register[Register.pc], _register[Register.sp], _register[Register.t], _register[Register.m]);
 		}
 	}
-	public function nop() {
+	function nop() {
 		_register[Register.m] = 1; _register[Register.t] = 4;
 	}
-	public function reset() {
+	function m_time(_m:Int, _t:Int) {
+		_register[Register.m] = _m;
+		_register[Register.t] = _t;
+	}
+	function reset() {
 		_clock = new Clock();
 		_register = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
 	}
-	//Abstracted functions
-	public function inc(_a:Int, ?_b:Int) {
-		_register[_a] += 1;
-		if (_b != null) _register[_b] += 1;
-		if (_b != null) m_time(6);
-		else m_time(4);
+	//increase register by 1. Can handle 16bit registers
+	function inc(_high:Int, ?_low:Int) {
+		if (_low == null) {
+			_register[_high] += 1;
+			_register[_high] &= 0xff;
+			m_time(1, 4);
+		} else {
+			var _word = _register[_high] << 8 | _register[_low];
+			_word += 1;
+			_register[_high] = (_word >> 8) & 0xFF;
+			_register[_low] = _word & 0xFF;
+			m_time(3, 11);
+		}
 	}
-	public function dec(_a:Int, ?_b:Int) {
-		_register[_a] -= 1;
-		if (_b != null) _register[_b] -= 1;
-		if (_b != null) m_time(6);
-		else m_time(4);
+	//decrease register by 1. Can handle 16 bit register
+	function dec(_high:Int, ?_low:Int) {
+		if (_low == null) {
+			_register[_high] -= 1;
+			_register[_high] &= 0xff;
+			m_time(1, 4);
+		} else {
+			var _word = _register[_high] << 8 | _register[_low];
+			_word -= 1;
+			_register[_high] = (_word >> 8) & 0xFF;
+			_register[_low] = _word & 0xFF;
+			m_time(3, 11);
+		}
 	}
-	function m_time(_v:Int) {
-		_register[Register.m] = _v;
-		_register[Register.t] = _v * 4;
+	//Load content of b into a
+	function load_rr(_regA:Int, _regB:Int) {
+		_register[_regA] = _register[_regB];
+		m_time(1, 4);
+	}
+	//Load the contents of memory location (hl) into register
+	function load_rHLm(_reg:Int) {
+		var hl = (_register[Register.h] << 8) + _register[Register.l];
+		var val = _meminter.read_byte(hl);
+		_register[_reg] = val;
+		m_time(2, 7);
+	}
+	//Load register and write to location (HL)
+	function load_HLmr(_reg:Int) {
+		var hl = (_register[Register.h] << 8) + _register[Register.l];
+		_meminter.write_byte(hl, _register[_reg]);
+		m_time(2, 7);
+	}
+	//Load memory at PC location and set it to registry
+	function load_rn(_reg:Int) {
+		var byte = _meminter.read_byte(_register[Register.pc]);
+		_register[_reg] = byte;
+		_register[Register.pc] += 1;
+		m_time(2, 7);
+	}
+	//Load memory at PC and write it to memory at HL
+	function load_hlmn() {
+		var byte = _meminter.read_byte(_register[Register.pc]);
+		var hl = (_register[Register.h] << 8) + _register[Register.l];
+		_meminter.write_byte(hl, byte);
+		_register[Register.pc] += 1;
+		m_time(3, 10);
+	}
+	//Load register r and load it into memory at RR
+	function load_rrma(_high:Int, _low:Int, _reg:Int) {
+		var byte = (_register[_high] << 8) + _register[_low];
+		_meminter.write_byte(byte, _register[_reg]);
+		m_time(2, 7);
+	}
+	//Load word at PC (A), Write register to A as byte
+	function load_mmr(_reg:Int) {
+		_meminter.write_byte(_meminter.read_word(_register[Register.pc]), _register[Register.a]);
+		_register[Register.pc] += 2;
+		m_time(4, 13);
+	}
+	//load byte at RR and set it to r
+	function load_rRRm(_reg:Int, _high:Int, _low:Int) {
+		var byte = (_register[_high] << 8) + _register[_low];
+		_register[_reg] = _meminter.read_byte(byte);
+		m_time(2, 7);
 	}
 	function write_map_table() 
 	{
-		_map = new Map();
 		_map[0x00] = nop; //No operation
 		_map[0x01] = nop;
 		_map[0x02] = nop;
-		_map[0x03] = inc.bind(Register.b, Register.c); //incriment B and C
-		_map[0x04] = nop;
-		_map[0x05] = nop;
+		_map[0x03] = inc.bind(Register.b, Register.c); //incriment BC
+		_map[0x04] = inc.bind(Register.b); //Incriment B
+		_map[0x05] = dec.bind(Register.b); //decrease B
 		_map[0x06] = nop;
 		_map[0x07] = nop;
 		_map[0x08] = nop;
 		_map[0x09] = nop;
 		_map[0x0A] = nop;
-		_map[0x0B] = nop;
-		_map[0x0C] = nop;
-		_map[0x0D] = nop;
+		_map[0x0B] = dec.bind(Register.b, Register.c);
+		_map[0x0C] = inc.bind(Register.c);
+		_map[0x0D] = dec.bind(Register.c);
 		_map[0x0E] = nop;
 		_map[0x0F] = nop;
 		_map[0x10] = nop;
@@ -134,6 +186,22 @@ class Z80
 		_map[0x37] = nop;
 		_map[0x38] = nop;
 		_map[0x39] = nop;
+		_map[0x3A] = nop;
+		_map[0x3B] = nop;
+		_map[0x3C] = nop;
+		_map[0x3D] = nop;
+		_map[0x3E] = nop;
+		_map[0x3F] = nop;
+		_map[0x40] = nop;
+		_map[0x41] = nop;
+		_map[0x42] = nop;
+		_map[0x43] = nop;
+		_map[0x44] = nop;
+		_map[0x45] = nop;
+		_map[0x46] = nop;
+		_map[0x47] = nop;
+		_map[0x48] = nop;
+		_map[0x49] = nop;
 		_map[0x4A] = nop;
 		_map[0x4B] = nop;
 		_map[0x4C] = nop;
@@ -317,13 +385,6 @@ class Z80
 		_map[0xFE] = nop;
 		_map[0xFF] = nop;
 	}
-}
-class MemoryInterface {
-	public function new() {}
-	public function read_byte(_addr):Int {return 0x03; }
-	public function read_word(_addr):Int {return 0; }
-	public function write_byte(_addr, _value) {}
-	public function write_word(_addr, _value) {}
 }
 class Clock {
 	public var m:Int = 0;
