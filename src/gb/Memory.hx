@@ -42,7 +42,7 @@ class Memory {
 		trace("Zram good");
 	}
 	public function load(_romdata:String) {
-		_rom = File.getContent(_romdata);
+		_rom = _romdata;
 	}
 	public function read_byte(_addr:Int):Int {
 		switch(_addr & 0xF000) {
