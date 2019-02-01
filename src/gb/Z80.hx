@@ -57,6 +57,7 @@ class Z80
 		if (_low == null) {
 			_register[_high] += 1;
 			_register[_high] &= 0xff;
+			_register[Register.f] = _register[_high] == 0 ? 0 : 0x80;
 			m_time(1, 4);
 		} else {
 			var _word = _register[_high] << 8 | _register[_low];
@@ -80,6 +81,7 @@ class Z80
 		if (_low == null) {
 			_register[_high] -= 1;
 			_register[_high] &= 0xff;
+			_register[Register.f] = _register[_high] == 0 ? 0 : 0x80;
 			m_time(1, 4);
 		} else {
 			var _word = _register[_high] << 8 | _register[_low];
