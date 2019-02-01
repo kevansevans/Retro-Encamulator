@@ -2,6 +2,8 @@ package;
 
 import gb.Z80;
 
+import sys.io.File;
+
 /**
  * ...
  * @author Kaelan
@@ -62,7 +64,7 @@ class Main
 	static function launch_emulator() 
 	{
 		gameboy = new Z80();
-		gameboy._meminter.load(rom_path);
+		gameboy._meminter.load(File.getContent(rom_path));
 		if (!TAS_Mode) {
 			gameboy.run();
 		} else {
