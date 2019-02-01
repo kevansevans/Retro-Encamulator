@@ -33,8 +33,8 @@ class Z80
 		}
 	}
 	public function step(?_code:Int) {
-		if (_code != null) op = _code;
-		else op = (_meminter.read_byte(++_register[Register.pc])) + (_meminter._inbios == true ? 0 : 128); //+128 to turn the value into unsigned, test me on other targets please
+		op = (_meminter.read_byte(++_register[Register.pc])); 
+		op &= 255; //bitwise and to set value to unsigned
 		if (_map[op] == null) throw "Null function pointer at: " + op + " " + _clock.m; //take this out when needed
 		_map[op]();
 		_register[Register.pc] &= 65535;
