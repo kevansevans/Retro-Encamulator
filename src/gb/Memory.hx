@@ -5,7 +5,7 @@ package gb;
  * @author Kaelan
  */
 class Memory {
-	var _inbios:Bool = true;
+	public var _inbios:Bool = true;
 	var _ie:Int = 0;
 	var _if:Int = 0;
 	var _rom:String = "";
@@ -15,7 +15,7 @@ class Memory {
 	var _eram:Map<Int, Int> = new Map();
 	var _wram:Map<Int, Int> = new Map();
 	var _zram:Map<Int, Int> = new Map();
-	var _bios:Array<Int> = [
+	public var _bios:Array<Int> = [
     0x31, 0xFE, 0xFF, 0xAF, 0x21, 0xFF, 0x9F, 0x32, 0xCB, 0x7C, 0x20, 0xFB, 0x21, 0x26, 0xFF, 0x0E,
     0x11, 0x3E, 0x80, 0x32, 0xE2, 0x0C, 0x3E, 0xF3, 0xE2, 0x32, 0x3E, 0x77, 0x77, 0x3E, 0xFC, 0xE0,
     0x47, 0x11, 0x04, 0x01, 0x21, 0x10, 0x80, 0x1A, 0xCD, 0x95, 0x00, 0xCD, 0x96, 0x00, 0x13, 0x7B,
@@ -35,14 +35,17 @@ class Memory {
 	];
 	public function new() {
 		for (a in 0...8192) {_wram[a] = 0; }
+		trace("Wram good");
 		for (b in 0...32768) {_eram[b] = 0; }
+		trace("Eram good");
 		for (a in 0...127) {_zram[a] = 0; }
+		trace("Zram good");
+	}
 	public function load(_romdata:String) {
 		_rom = File.getContent(_romdata);
 	}
 	public function read_byte(_addr:Int):Int {
 		switch(_addr & 0xF000) {
-			//rom bank 0
 			case 0x0000 :
 				if (_inbios) {
 					if (_addr < 0x0100) return _bios[_addr];
