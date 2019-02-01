@@ -14,41 +14,50 @@ class Z80
 {
 	public static var _clock:Clock;
 	public static var _register:Array<Int>;
-	var op:Int;
+	var op:Int = 0;
 	var ignore_false_nop = #if debug true #else false #end;
-	var _meminter:Memory;
-	var _map:Map<Int, Function> = new Map();
+	public var _meminter:Memory;
+	public var _map:Map<Int, Function> = new Map();
+	var _halt:Bool = false;
 	public function new() 
 	{
 		_clock = new Clock();
 		_register = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
 		_meminter = new Memory();
 		write_map_table();
-		run();
 	}
-	function run() 
+	public function run() 
 	{
 		while (true) {
-			var op = _meminter.read_byte(++_register[Register.pc]);
-			if (_map[op] == null) throw "Null function pointer at: " + op; //take this out when needed
-			_map[op]();
-			_register[Register.pc] &= 65535;
-			_clock.m += _register[Register.m];
-			_clock.t += _register[Register.t];
-			#if debug
-			trace(op, _register[Register.a], _register[Register.b], _register[Register.c], _register[Register.d], _register[Register.e], _register[Register.f], _register[Register.h], _register[Register.l], _register[Register.pc], _register[Register.sp], _register[Register.t], _register[Register.m]);
-			#end
+			step();
 		}
+	}
+	public function step(?_code:Int) {
+		if (_code != null) op = _code;
+		else op = (_meminter.read_byte(++_register[Register.pc])) + (_meminter._inbios == true ? 0 : 128); //+128 to turn the value into unsigned, test me on other targets please
+		if (_map[op] == null) throw "Null function pointer at: " + op + " " + _clock.m; //take this out when needed
+		_map[op]();
+		_register[Register.pc] &= 65535;
+		_clock.m += _register[Register.m];
+		_clock.t += _register[Register.t];
+		#if debug
+		trace("Code: " + op + "/255", _register[Register.a], _register[Register.b], _register[Register.c], _register[Register.d], _register[Register.e], _register[Register.f], _register[Register.h], _register[Register.l], _register[Register.pc], _register[Register.sp], _register[Register.t], _register[Register.m]);
+		#end
 	}
 	function nop() {
 		if (op != 0 && !ignore_false_nop) throw "Op code not set, please check: " + StringTools.hex(op);
 		_register[Register.m] = 1; _register[Register.t] = 4;
 	}
+	function halt() {
+		_halt = true;
+		m_time(1, 4);
+	}
 	function m_time(_m:Int, _t:Int) {
 		_register[Register.m] = _m;
 		_register[Register.t] = _t;
 	}
-	function reset() {
+	public function reset() {
+		_meminter = new Memory();
 		_clock = new Clock();
 		_register = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
 	}
