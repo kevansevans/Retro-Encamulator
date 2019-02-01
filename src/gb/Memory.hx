@@ -37,6 +37,8 @@ class Memory {
 		for (a in 0...8192) {_wram[a] = 0; }
 		for (b in 0...32768) {_eram[b] = 0; }
 		for (a in 0...127) {_zram[a] = 0; }
+	public function load(_romdata:String) {
+		_rom = File.getContent(_romdata);
 	}
 	public function read_byte(_addr:Int):Int {
 		switch(_addr & 0xF000) {
