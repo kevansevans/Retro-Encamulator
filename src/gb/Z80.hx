@@ -62,52 +62,40 @@ class Z80
 		_register = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
 	}
 	//increase register by 1. Can handle 16bit registers
-	function inc(_high:Int, ?_low:Int) {
-		if (_low == null) {
+	function inc(_reg:Int) {
+		var bitand = _reg == Register.sp ? 65535 : 255;
+		_register[_reg] += 1;
+		_register[_reg] &= bitand;
+		_register[Register.f] = _register[_reg] == 0 ? 0 : 0x80;
+		m_time(1, 4);
+	}
+	//increas register pair by 1
+	function inc_rr(_high:Int, _low:Int) {
+		_register[_low] += 1;
+		_register[_low] &= 255;
+		if (_register[_high] == 0) {
 			_register[_high] += 1;
-			_register[_high] &= 0xff;
-			_register[Register.f] = _register[_high] == 0 ? 0 : 0x80;
-			m_time(1, 4);
-		} else {
-			var _word = _register[_high] << 8 | _register[_low];
-			_word += 1;
-			_register[_high] = (_word >> 8) & 0xFF;
-			_register[_low] = _word & 0xFF;
-			m_time(3, 11);
+			_register[_high] &= 255;
 		}
+		m_time(1, 6);
 	}
-	//increase value at location of HL
-	function inc_hl() {
-		var hl = (_register[Register.h] << 8) + _register[Register.l];
-		var i = _meminter.read_byte(hl) + 1;
-		i &= 255;
-		_meminter.write_byte(hl, i);
-		_register[Register.f] = i == 0 ? 0 : 0x80;
-		m_time(3, 11);
+	//decrease register by 1.
+	function dec(_reg:Int) {
+		var bitand = _reg == Register.sp ? 65535 : 255;
+		_register[_reg] -= 1;
+		_register[_reg] &= bitand;
+		_register[Register.f] = _register[_reg] == 0 ? 0 : 0x80;
+		m_time(1, 4);
 	}
-	//decrease register by 1. Can handle 16 bit register
-	function dec(_high:Int, ?_low:Int) {
-		if (_low == null) {
+	//degrease register pair
+	function dec_rr(_high:Int, _low:Int) {
+		_register[_low] -= 1;
+		_register[_low] &= 255;
+		if (_register[_high] == 255) {
 			_register[_high] -= 1;
-			_register[_high] &= 0xff;
-			_register[Register.f] = _register[_high] == 0 ? 0 : 0x80;
-			m_time(1, 4);
-		} else {
-			var _word = _register[_high] << 8 | _register[_low];
-			_word -= 1;
-			_register[_high] = (_word >> 8) & 0xFF;
-			_register[_low] = _word & 0xFF;
-			m_time(3, 11);
+			_register[_high] &= 255;
 		}
-	}
-	//increase value at location of HL
-	function dec_hl() {
-		var hl = (_register[Register.h] << 8) + _register[Register.l];
-		var i = _meminter.read_byte(hl) - 1;
-		i &= 255;
-		_meminter.write_byte(hl, i);
-		_register[Register.f] = i == 0 ? 0 : 0x80;
-		m_time(3, 11);
+		m_time(1, 6);
 	}
 	//Load content of b into a
 	function load_rr(_regA:Int, _regB:Int) {
@@ -172,7 +160,7 @@ class Z80
 		_map[0x00] = nop; //No operation
 		_map[0x01] = load_rrnn.bind(Register.b, Register.c); // ld bc, nn
 		_map[0x02] = nop; // ld (bc), a
-		_map[0x03] = inc.bind(Register.b, Register.c); //incriment BC
+		_map[0x03] = inc_rr.bind(Register.b, Register.c); //incriment BC
 		_map[0x04] = inc.bind(Register.b); //Incriment B
 		_map[0x05] = dec.bind(Register.b); //decrease B
 		_map[0x06] = load_rn.bind(Register.b);
@@ -180,7 +168,7 @@ class Z80
 		_map[0x08] = nop;
 		_map[0x09] = nop;
 		_map[0x0A] = load_rRRm.bind(Register.a, Register.b, Register.c);
-		_map[0x0B] = dec.bind(Register.b, Register.c);
+		_map[0x0B] = dec_rr.bind(Register.b, Register.c);
 		_map[0x0C] = inc.bind(Register.c);
 		_map[0x0D] = dec.bind(Register.c);
 		_map[0x0E] = load_rn.bind(Register.c);
@@ -188,7 +176,7 @@ class Z80
 		_map[0x10] = nop;
 		_map[0x11] = load_rrnn.bind(Register.d, Register.e);
 		_map[0x12] = nop;
-		_map[0x13] = inc.bind(Register.d, Register.e);
+		_map[0x13] = inc_rr.bind(Register.d, Register.e);
 		_map[0x14] = inc.bind(Register.d);
 		_map[0x15] = dec.bind(Register.d);
 		_map[0x16] = load_rn.bind(Register.d);
@@ -196,7 +184,7 @@ class Z80
 		_map[0x18] = nop;
 		_map[0x19] = nop;
 		_map[0x1A] = load_rRRm.bind(Register.a, Register.d, Register.e);
-		_map[0x1B] = dec.bind(Register.d, Register.e);
+		_map[0x1B] = dec_rr.bind(Register.d, Register.e);
 		_map[0x1C] = inc.bind(Register.e);
 		_map[0x1D] = dec.bind(Register.e);
 		_map[0x1E] = load_rn.bind(Register.e);
@@ -204,7 +192,7 @@ class Z80
 		_map[0x20] = nop;
 		_map[0x21] = load_rrnn.bind(Register.h, Register.l);
 		_map[0x22] = nop;
-		_map[0x23] = inc.bind(Register.h, Register.l);
+		_map[0x23] = inc_rr.bind(Register.h, Register.l);
 		_map[0x24] = inc.bind(Register.h);
 		_map[0x25] = dec.bind(Register.h);
 		_map[0x26] = load_rn.bind(Register.h);
@@ -212,7 +200,7 @@ class Z80
 		_map[0x28] = nop;
 		_map[0x29] = nop;
 		_map[0x2A] = load_hlmn;
-		_map[0x2B] = dec.bind(Register.h, Register.l);
+		_map[0x2B] = dec_rr.bind(Register.h, Register.l);
 		_map[0x2C] = inc.bind(Register.l);
 		_map[0x2D] = dec.bind(Register.l);
 		_map[0x2E] = load_rn.bind(Register.a);
@@ -221,8 +209,8 @@ class Z80
 		_map[0x31] = nop;
 		_map[0x32] = load_rn.bind(Register.sp);
 		_map[0x33] = inc.bind(Register.sp);
-		_map[0x34] = inc_hl;
-		_map[0x35] = dec_hl;
+		_map[0x34] = inc_rr.bind(Register.h, Register.l);
+		_map[0x35] = dec_rr.bind(Register.h, Register.l);
 		_map[0x36] = nop;
 		_map[0x37] = nop;
 		_map[0x38] = nop;
