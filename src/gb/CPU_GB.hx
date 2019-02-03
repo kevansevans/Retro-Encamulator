@@ -17,7 +17,7 @@ class CPU_GB
 	public static var _rshadow:Array<Int>;
 	var op:Int = 0;
 	var ignore_false_nop = #if debug true #else false #end;
-	public var _meminter:Memory;
+	public var _memory:Memory;
 	public var _map:Map<Int, Function> = new Map();
 	var _halt:Bool = false;
 	var _stop:Bool = false;
@@ -26,18 +26,17 @@ class CPU_GB
 		_clock = new Clock();
 		_register = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
 		_rshadow = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
-		_meminter = new Memory();
+		_memory = new Memory();
 		write_map_table();
 	}
 	public function run() 
 	{
 		while (true) {
 			step();
-			Sys.sleep(0.125);
 		}
 	}
 	public function step(?_code:Int) {
-		op = (_meminter.read_byte(++_register[Register.pc])); 
+		op = (_memory.read_byte(++_register[Register.pc])); 
 		op &= 255; //bitwise and to set value to unsigned
 		if (_code != null) op = _code;
 		if (_map[op] == null) throw "Null function pointer at: " + op + " " + _clock.m; //take this out when needed
@@ -73,7 +72,7 @@ class CPU_GB
 		_register[Register.t] = _t;
 	}
 	public function reset() {
-		_meminter = new Memory();
+		_memory = new Memory();
 		_clock = new Clock();
 		_register = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
 		_rshadow = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
@@ -85,7 +84,7 @@ class CPU_GB
 	function reti() {
 		_register[Register.ime] = 1;
 		reset_shadow();
-		_register[Register.pc] = _meminter.read_word(_register[Register.sp]);
+		_register[Register.pc] = _memory.read_word(_register[Register.sp]);
 		_register[Register.sp] += 2;
 		m_time(4, 14);
 	}
@@ -133,55 +132,69 @@ class CPU_GB
 	/**LD r,(HL)*/
 	function load_rHLm(_reg:Int) {
 		var hl = (_register[Register.h] << 8) + _register[Register.l];
-		var val = _meminter.read_byte(hl);
+		var val = _memory.read_byte(hl);
 		_register[_reg] = val;
 		m_time(2, 7);
 	}
 	/**LD (HL),r*/
 	function load_HLmr(_reg:Int) {
 		var hl = (_register[Register.h] << 8) + _register[Register.l];
-		_meminter.write_byte(hl, _register[_reg]);
+		_memory.write_byte(hl, _register[_reg]);
 		m_time(2, 7);
 	}
 	/**LD r,n*/
 	function load_rn(_reg:Int) {
-		var byte = _meminter.read_byte(_register[Register.pc]);
+		var byte = _memory.read_byte(_register[Register.pc]);
 		_register[_reg] = byte;
 		_register[Register.pc] += 1;
 		m_time(2, 7);
 	}
 	/**LD (HL), n*/
 	function load_hlmn() {
-		var byte = _meminter.read_byte(_register[Register.pc]);
+		var byte = _memory.read_byte(_register[Register.pc]);
 		var hl = (_register[Register.h] << 8) + _register[Register.l];
-		_meminter.write_byte(hl, byte);
+		_memory.write_byte(hl, byte);
 		_register[Register.pc] += 1;
 		m_time(3, 10);
 	}
 	/**LD (dd),r*/
 	function load_rrma(_high:Int, _low:Int, _reg:Int) {
 		var byte = (_register[_high] << 8) + _register[_low];
-		_meminter.write_byte(byte, _register[_reg]);
+		_memory.write_byte(byte, _register[_reg]);
 		m_time(2, 7);
 	}
 	/**LD n,r*/
 	function load_mmr(_reg:Int) {
-		_meminter.write_byte(_meminter.read_word(_register[Register.pc]), _register[Register.a]);
+		_memory.write_byte(_memory.read_word(_register[Register.pc]), _register[Register.a]);
 		_register[Register.pc] += 2;
 		m_time(4, 13);
 	}
 	/**LD r, nn*/
 	function load_rRRm(_reg:Int, _high:Int, _low:Int) {
 		var byte = (_register[_high] << 8) + _register[_low];
-		_register[_reg] = _meminter.read_byte(byte);
+		_register[_reg] = _memory.read_byte(byte);
 		m_time(2, 7);
 	}
 	/**LD dd, (nn)*/
 	function load_rrnn(_high:Int, _low:Int) {
-		_register[_low] = _meminter.read_byte(_register[Register.pc]);
-		_register[_high] = _meminter.read_byte(_register[Register.pc + 1]);
+		_register[_low] = _memory.read_byte(_register[Register.pc]);
+		_register[_high] = _memory.read_byte(_register[Register.pc + 1]);
 		_register[Register.pc] += 2;
 		m_time(2, 10);
+	}
+	/**LDI (HL+),a*/
+	function load_iHLa() {
+		_memory.write_byte((_register[Register.h] << 8) + _register[Register.l], _register[Register.a]);
+		_register[Register.l] = (_register[Register.l] + 1) & 255;
+		if (_register[Register.l] == 0) _register[Register.h] = (_register[Register.h]) & 255;
+		m_time(1, 8);
+	}
+	/**LDI a,(HL+)*/
+	function load_aHLi() {
+		_register[Register.a] = _memory.read_byte((_register[Register.h] << 8) + _register[Register.l]);
+		_register[Register.l] = (_register[Register.l] + 1) & 255;
+		if (_register[Register.l] == 0) _register[Register.h] = (_register[Register.h]) & 255;
+		m_time(1, 8);
 	}
 	/**rlca*/
 	function rlca() {
@@ -194,9 +207,27 @@ class CPU_GB
 	}
 	/**rla*/
 	function rla() {
-		var ci = (_register[Register.a] & 0x10 == 1 ? 1 : 0);
-		var co = (_register[Register.a] & 0x80 == 1 ? 0x10 : 0);
+		var ci = _register[Register.f] & 0x10 == 1 ? 1 : 0;
+		var co = _register[Register.a] & 0x80 == 1 ? 0x10 : 0;
 		_register[Register.a] = (_register[Register.a] << 1) + ci;
+		_register[Register.a] &= 255;
+		_register[Register.f] = (_register[Register.f] & 0xEF) + co;
+		m_time(1, 4);
+	}
+	/**rrca*/
+	function rrca() {
+		var ci  = _register[Register.a] & 1 == 1 ? 0x80 : 0;
+		var co  = _register[Register.a] & 1 == 1 ? 0x10 : 0;
+		_register[Register.a] = (_register[Register.a] >> 1) + ci;
+		_register[Register.a] &= 255;
+		_register[Register.f] = (_register[Register.f] & 0xEF) + co;
+		m_time(1, 4);
+	}
+	/**RRA*/
+	function rra() {
+		var ci = _register[Register.f] & 0x10 == 1 ? 0x80 : 0;
+		var co = _register[Register.a] & 1 == 1 ? 0x10 : 0;
+		_register[Register.a] = (_register[Register.a] >> 1) + ci;
 		_register[Register.a] &= 255;
 		_register[Register.f] = (_register[Register.f] & 0xEF) + co;
 		m_time(1, 4);
@@ -231,6 +262,36 @@ class CPU_GB
 		if ((_register[Register.a] ^ _register[Register.b] ^ a) & 0x10 != 0) _register[Register.f] |= 0x20;
 		m_time(1, 4);
 	}
+	/**JR n*/
+	function jump_n() {
+		var i = _memory.read_byte(_register[Register.pc]);
+		if (i > 127) i -= ((~i + 1) & 255);
+		_register[Register.pc] += 1;
+		_register[Register.pc] += i;
+		m_time(3, 12);
+	}
+	/**JR NZ,e*/
+	function jump_NZe() {
+		var i = _memory.read_byte(_register[Register.pc]);
+		if (i > 127) i -= ((~i + 1) & 255);
+		_register[Register.pc] += 1;
+		m_time(2, 7);
+		if ((_register[Register.f] & 0x80) == 0x00) {
+			_register[Register.pc] += i;
+			m_time(3, 12);
+		}
+	}
+	/**DAA*/
+	function daa() {
+		var a = _register[Register.a];
+		if ((_register[Register.f] & 0x20 == 1) || (_register[Register.a] & 15) > 9) _register[Register.a] += 6;
+		_register[Register.f] &= 0xEF;
+		if ((_register[Register.f] & 0x20 == 1) || (a > 0x99)) {
+			_register[Register.a] += 0x60;
+			_register[Register.f] |= 0x10;
+		}
+		m_time(1, 4);
+	}
 	function write_map_table() 
 	{
 		_map[0x00] = nop;
@@ -248,8 +309,8 @@ class CPU_GB
 		_map[0x0C] = inc.bind(Register.c);
 		_map[0x0D] = dec.bind(Register.c);
 		_map[0x0E] = load_rn.bind(Register.c);
-		_map[0x0F] = nop;
-		_map[0x10] = nop;
+		_map[0x0F] = rrca;
+		_map[0x10] = nop; //Stop code here
 		_map[0x11] = load_rrnn.bind(Register.d, Register.e);
 		_map[0x12] = load_rrma.bind(Register.d, Register.e, Register.a);
 		_map[0x13] = inc_rr.bind(Register.d, Register.e);
@@ -257,25 +318,25 @@ class CPU_GB
 		_map[0x15] = dec.bind(Register.d);
 		_map[0x16] = load_rn.bind(Register.d);
 		_map[0x17] = rla;
-		_map[0x18] = nop;
+		_map[0x18] = jump_n;
 		_map[0x19] = add_hlss.bind(Register.d, Register.e);
 		_map[0x1A] = load_rRRm.bind(Register.a, Register.d, Register.e);
 		_map[0x1B] = dec_rr.bind(Register.d, Register.e);
 		_map[0x1C] = inc.bind(Register.e);
 		_map[0x1D] = dec.bind(Register.e);
 		_map[0x1E] = load_rn.bind(Register.e);
-		_map[0x1F] = nop;
-		_map[0x20] = nop;
+		_map[0x1F] = rra;
+		_map[0x20] = jump_NZe;
 		_map[0x21] = load_rrnn.bind(Register.h, Register.l);
-		_map[0x22] = nop;
+		_map[0x22] = load_iHLa;
 		_map[0x23] = inc_rr.bind(Register.h, Register.l);
 		_map[0x24] = inc.bind(Register.h);
 		_map[0x25] = dec.bind(Register.h);
 		_map[0x26] = load_rn.bind(Register.h);
-		_map[0x27] = nop;
+		_map[0x27] = daa;
 		_map[0x28] = nop;
 		_map[0x29] = add_hlss.bind(Register.h, Register.l);
-		_map[0x2A] = load_hlmn;
+		_map[0x2A] = load_aHLi;
 		_map[0x2B] = dec_rr.bind(Register.h, Register.l);
 		_map[0x2C] = inc.bind(Register.l);
 		_map[0x2D] = dec.bind(Register.l);

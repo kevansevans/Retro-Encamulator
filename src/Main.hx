@@ -67,7 +67,7 @@ class Main
 	static function launch_emulator() 
 	{
 		gameboy = new CPU_GB();
-		gameboy._meminter.load(File.getContent(rom_path));
+		gameboy._memory.load(File.getContent(rom_path));
 		if (!TAS_Mode) {
 			gameboy.run();
 		} else {
@@ -87,7 +87,7 @@ class Main
 		Sys.sleep(10);
 		gameboy.reset();
 		Sys.println("testing bios...");
-		for (a in gameboy._meminter._bios) {
+		for (a in gameboy._memory._bios) {
 			gameboy.step(a);
 			Sys.sleep(0.125);
 		}
