@@ -22,6 +22,9 @@ class Main
 	{
 		#if sys
 		Sys.println("Haxewell Retro Encamulator");
+		Sys.println("Alpha version. Not recommended for use.");
+		Sys.println("HRE is only for backend emulation. Users are encouraged to create their own renderer to utilize the HRE cores.");
+		Sys.println("HRE is built on Haxe, so wherever Haxe can deploy, so can HRE.");
 		read_command();
 		#end
 	}
