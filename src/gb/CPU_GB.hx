@@ -10,7 +10,7 @@ import gb.Register;
  * made following tutorial: http://imrannazar.com/GameBoy-Emulation-in-JavaScript:-The-CPU
  * 
  */
-class Z80 
+class CPU_GB 
 {
 	public static var _clock:Clock;
 	public static var _register:Array<Int>;
@@ -19,6 +19,7 @@ class Z80
 	public var _meminter:Memory;
 	public var _map:Map<Int, Function> = new Map();
 	var _halt:Bool = false;
+	var _stop:Bool = false;
 	public function new() 
 	{
 		_clock = new Clock();
@@ -44,10 +45,12 @@ class Z80
 		trace("Code: " + op + "/255", _register[Register.a], _register[Register.b], _register[Register.c], _register[Register.d], _register[Register.e], _register[Register.f], _register[Register.h], _register[Register.l], _register[Register.pc], _register[Register.sp], _register[Register.t], _register[Register.m]);
 		#end
 	}
+	/**No Operation*/
 	function nop() {
 		if (op != 0 && !ignore_false_nop) throw "Op code not set, please check: " + StringTools.hex(op);
 		_register[Register.m] = 1; _register[Register.t] = 4;
 	}
+	/**Halt*/
 	function halt() {
 		_halt = true;
 		m_time(1, 4);
@@ -61,7 +64,7 @@ class Z80
 		_clock = new Clock();
 		_register = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
 	}
-	//increase register by 1. Can handle 16bit registers
+	/**INC r*/
 	function inc(_reg:Int) {
 		var bitand = _reg == Register.sp ? 65535 : 255;
 		_register[_reg] += 1;
@@ -69,7 +72,7 @@ class Z80
 		_register[Register.f] = _register[_reg] == 0 ? 0 : 0x80;
 		m_time(1, 4);
 	}
-	//increas register pair by 1
+	/**INC rr*/
 	function inc_rr(_high:Int, _low:Int) {
 		_register[_low] += 1;
 		_register[_low] &= 255;
@@ -79,7 +82,7 @@ class Z80
 		}
 		m_time(1, 6);
 	}
-	//decrease register by 1.
+	/**DEC r*/
 	function dec(_reg:Int) {
 		var bitand = _reg == Register.sp ? 65535 : 255;
 		_register[_reg] -= 1;
@@ -87,7 +90,7 @@ class Z80
 		_register[Register.f] = _register[_reg] == 0 ? 0 : 0x80;
 		m_time(1, 4);
 	}
-	//degrease register pair
+	/**DEC rr*/
 	function dec_rr(_high:Int, _low:Int) {
 		_register[_low] -= 1;
 		_register[_low] &= 255;
@@ -97,32 +100,32 @@ class Z80
 		}
 		m_time(1, 6);
 	}
-	//Load content of b into a
+	/**LD r,'r*/
 	function load_rr(_regA:Int, _regB:Int) {
 		_register[_regA] = _register[_regB];
 		m_time(1, 4);
 	}
-	//Load the contents of memory location (hl) into register
+	/**LD r,(HL)*/
 	function load_rHLm(_reg:Int) {
 		var hl = (_register[Register.h] << 8) + _register[Register.l];
 		var val = _meminter.read_byte(hl);
 		_register[_reg] = val;
 		m_time(2, 7);
 	}
-	//Load register and write to location (HL)
+	/**LD (HL),r*/
 	function load_HLmr(_reg:Int) {
 		var hl = (_register[Register.h] << 8) + _register[Register.l];
 		_meminter.write_byte(hl, _register[_reg]);
 		m_time(2, 7);
 	}
-	//Load memory at PC location and set it to registry
+	/**LD r,n*/
 	function load_rn(_reg:Int) {
 		var byte = _meminter.read_byte(_register[Register.pc]);
 		_register[_reg] = byte;
 		_register[Register.pc] += 1;
 		m_time(2, 7);
 	}
-	//Load memory at PC and write it to memory at HL
+	/**LD (HL), n*/
 	function load_hlmn() {
 		var byte = _meminter.read_byte(_register[Register.pc]);
 		var hl = (_register[Register.h] << 8) + _register[Register.l];
@@ -130,43 +133,86 @@ class Z80
 		_register[Register.pc] += 1;
 		m_time(3, 10);
 	}
-	//Load register r and load it into memory at RR
+	/**LD (dd),r*/
 	function load_rrma(_high:Int, _low:Int, _reg:Int) {
 		var byte = (_register[_high] << 8) + _register[_low];
 		_meminter.write_byte(byte, _register[_reg]);
 		m_time(2, 7);
 	}
-	//Load word at PC (A), Write register to A as byte
+	/**LD n,r*/
 	function load_mmr(_reg:Int) {
 		_meminter.write_byte(_meminter.read_word(_register[Register.pc]), _register[Register.a]);
 		_register[Register.pc] += 2;
 		m_time(4, 13);
 	}
-	//load byte at RR and set it to r
+	/**LD r, nn*/
 	function load_rRRm(_reg:Int, _high:Int, _low:Int) {
 		var byte = (_register[_high] << 8) + _register[_low];
 		_register[_reg] = _meminter.read_byte(byte);
 		m_time(2, 7);
 	}
-	//Load nn into RR
+	/**LD dd, (nn)*/
 	function load_rrnn(_high:Int, _low:Int) {
 		_register[_low] = _meminter.read_byte(_register[Register.pc]);
 		_register[_high] = _meminter.read_byte(_register[Register.pc + 1]);
 		_register[Register.pc] += 2;
 		m_time(2, 10);
 	}
+	/**rlca*/
+	function rlca() {
+		var ci = (_register[Register.a] & 0x80 == 1 ? 1 : 0);
+		var co = (_register[Register.a] & 0x80 == 1 ? 0x10 : 0);
+		_register[Register.a] = (_register[Register.a] << 1) + ci;
+		_register[Register.a] &= 255;
+		_register[Register.f] = (_register[Register.f] & 0xEF) + co;
+		m_time(1, 4);
+	}
+	/**rla*/
+	function rla() {
+		var ci = (_register[Register.a] & 0x10 == 1 ? 1 : 0);
+		var co = (_register[Register.a] & 0x80 == 1 ? 0x10 : 0);
+		_register[Register.a] = (_register[Register.a] << 1) + ci;
+		_register[Register.a] &= 255;
+		_register[Register.f] = (_register[Register.f] & 0xEF) + co;
+		m_time(1, 4);
+	}
+	/**Halt and Catch Fire*/
+	function unused() {
+		trace("Code is unusued for the GB", StringTools.hex(_register[Register.pc] - 1), "stopping");
+		_stop = true;
+	}
+	/**Add HL,ss*/
+	function add_hlss(_high:Int, _low:Int) {
+		var hl = (_register[Register.h] << 8) + _register[Register.l];
+		hl += (_register[_high] << 8) + _register[_low];
+		if (hl > 65535) _register[Register.f] |= 0x10;
+		else _register[Register.f] &= 0xEF;
+		_register[Register.h] = (hl >> 8) & 255;
+		_register[Register.l] = hl & 255;
+		m_time(3, 11);
+	}
+	/**Add HL,SP*/
+	function add_hlsp() {
+		var hl = (_register[Register.h] << 8) + _register[Register.l];
+		hl += _register[Register.sp];
+		if (hl > 65535) _register[Register.f] |= 0x10;
+		else _register[Register.f] &= 0xEF;
+		_register[Register.h] = (hl >> 8) & 255;
+		_register[Register.l] = hl & 255;
+		m_time(3, 11);
+	}
 	function write_map_table() 
 	{
-		_map[0x00] = nop; //No operation
-		_map[0x01] = load_rrnn.bind(Register.b, Register.c); // ld bc, nn
-		_map[0x02] = nop; // ld (bc), a
-		_map[0x03] = inc_rr.bind(Register.b, Register.c); //incriment BC
-		_map[0x04] = inc.bind(Register.b); //Incriment B
-		_map[0x05] = dec.bind(Register.b); //decrease B
+		_map[0x00] = nop;
+		_map[0x01] = load_rrnn.bind(Register.b, Register.c);
+		_map[0x02] = load_rrma.bind(Register.b, Register.c, Register.a);
+		_map[0x03] = inc_rr.bind(Register.b, Register.c);
+		_map[0x04] = inc.bind(Register.b);
+		_map[0x05] = dec.bind(Register.b);
 		_map[0x06] = load_rn.bind(Register.b);
-		_map[0x07] = nop;
-		_map[0x08] = nop;
-		_map[0x09] = nop;
+		_map[0x07] = rlca;
+		_map[0x08] = unused;
+		_map[0x09] = add_hlss.bind(Register.b, Register.c);
 		_map[0x0A] = load_rRRm.bind(Register.a, Register.b, Register.c);
 		_map[0x0B] = dec_rr.bind(Register.b, Register.c);
 		_map[0x0C] = inc.bind(Register.c);
@@ -175,14 +221,14 @@ class Z80
 		_map[0x0F] = nop;
 		_map[0x10] = nop;
 		_map[0x11] = load_rrnn.bind(Register.d, Register.e);
-		_map[0x12] = nop;
+		_map[0x12] = load_rrma.bind(Register.d, Register.e, Register.a);
 		_map[0x13] = inc_rr.bind(Register.d, Register.e);
 		_map[0x14] = inc.bind(Register.d);
 		_map[0x15] = dec.bind(Register.d);
 		_map[0x16] = load_rn.bind(Register.d);
-		_map[0x17] = nop;
+		_map[0x17] = rla;
 		_map[0x18] = nop;
-		_map[0x19] = nop;
+		_map[0x19] = add_hlss.bind(Register.d, Register.e);
 		_map[0x1A] = load_rRRm.bind(Register.a, Register.d, Register.e);
 		_map[0x1B] = dec_rr.bind(Register.d, Register.e);
 		_map[0x1C] = inc.bind(Register.e);
@@ -198,7 +244,7 @@ class Z80
 		_map[0x26] = load_rn.bind(Register.h);
 		_map[0x27] = nop;
 		_map[0x28] = nop;
-		_map[0x29] = nop;
+		_map[0x29] = add_hlss.bind(Register.h, Register.l);
 		_map[0x2A] = load_hlmn;
 		_map[0x2B] = dec_rr.bind(Register.h, Register.l);
 		_map[0x2C] = inc.bind(Register.l);
@@ -213,7 +259,7 @@ class Z80
 		_map[0x35] = dec_rr.bind(Register.h, Register.l);
 		_map[0x36] = nop;
 		_map[0x37] = nop;
-		_map[0x38] = nop;
+		_map[0x38] = add_hlsp;
 		_map[0x39] = nop;
 		_map[0x3A] = nop;
 		_map[0x3B] = dec.bind(Register.sp);
@@ -368,23 +414,23 @@ class Z80
 		_map[0xD0] = nop;
 		_map[0xD1] = nop;
 		_map[0xD2] = nop;
-		_map[0xD3] = nop;
+		_map[0xD3] = unused;
 		_map[0xD4] = nop;
 		_map[0xD5] = nop;
 		_map[0xD6] = nop;
 		_map[0xD7] = nop;
 		_map[0xD8] = nop;
-		_map[0xD9] = nop;
+		_map[0xD9] = unused;
 		_map[0xDA] = nop;
 		_map[0xDB] = nop;
 		_map[0xDC] = nop;
-		_map[0xDD] = nop;
+		_map[0xDD] = unused;
 		_map[0xDE] = nop;
 		_map[0xDF] = nop;
 		_map[0xE0] = nop;
 		_map[0xE1] = nop;
 		_map[0xE2] = nop;
-		_map[0xE3] = nop;
+		_map[0xE3] = unused;
 		_map[0xE4] = nop;
 		_map[0xE5] = nop;
 		_map[0xE6] = nop;
@@ -392,7 +438,7 @@ class Z80
 		_map[0xE8] = nop;
 		_map[0xE9] = nop;
 		_map[0xEA] = nop;
-		_map[0xEB] = nop;
+		_map[0xEB] = unused;
 		_map[0xEC] = nop;
 		_map[0xED] = nop;
 		_map[0xEE] = nop;

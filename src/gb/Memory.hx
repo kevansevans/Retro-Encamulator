@@ -49,7 +49,7 @@ class Memory {
 			case 0x0000 :
 				if (_inbios) {
 					if (_addr < 0x0100) return _bios[_addr];
-					else if (Z80._register[Register.pc] == 0x100) {
+					else if (CPU_GB._register[Register.pc] == 0x100) {
 						_inbios = false;
 						trace("Leaving Bios");
 					}

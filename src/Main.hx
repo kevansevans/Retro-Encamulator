@@ -1,6 +1,6 @@
 package;
 
-import gb.Z80;
+import gb.CPU_GB;
 
 import sys.io.File;
 
@@ -15,7 +15,7 @@ enum abstract Argument(String) from String {
 }
 class Main 
 {
-	static var gameboy:Z80;
+	static var gameboy:CPU_GB;
 	static var rom_path:Null<String>;
 	static var TAS_Mode:Bool = false;
 	static function main() 
@@ -63,7 +63,7 @@ class Main
 	
 	static function launch_emulator() 
 	{
-		gameboy = new Z80();
+		gameboy = new CPU_GB();
 		gameboy._meminter.load(File.getContent(rom_path));
 		if (!TAS_Mode) {
 			gameboy.run();
@@ -72,7 +72,7 @@ class Main
 		}
 	}
 	static function test_mode() {
-		gameboy = new Z80();
+		gameboy = new CPU_GB();
 		Sys.println("testing op codes...");
 		Sys.sleep(5);
 		for (a in 0...256) {
