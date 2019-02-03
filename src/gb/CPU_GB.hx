@@ -14,6 +14,7 @@ class CPU_GB
 {
 	public static var _clock:Clock;
 	public static var _register:Array<Int>;
+	public static var _rshadow:Array<Int>;
 	var op:Int = 0;
 	var ignore_false_nop = #if debug true #else false #end;
 	public var _meminter:Memory;
@@ -23,7 +24,8 @@ class CPU_GB
 	public function new() 
 	{
 		_clock = new Clock();
-		_register = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+		_register = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+		_rshadow = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
 		_meminter = new Memory();
 		write_map_table();
 	}
@@ -31,11 +33,13 @@ class CPU_GB
 	{
 		while (true) {
 			step();
+			Sys.sleep(0.125);
 		}
 	}
 	public function step(?_code:Int) {
 		op = (_meminter.read_byte(++_register[Register.pc])); 
 		op &= 255; //bitwise and to set value to unsigned
+		if (_code != null) op = _code;
 		if (_map[op] == null) throw "Null function pointer at: " + op + " " + _clock.m; //take this out when needed
 		_map[op]();
 		_register[Register.pc] &= 65535;
@@ -55,6 +59,15 @@ class CPU_GB
 		_halt = true;
 		m_time(1, 4);
 	}
+	/**Halt and Catch Fire*/
+	function unused() {
+		#if release
+		trace("Code is unusued for the GB", StringTools.hex(_register[Register.pc] - 1), "stopping");
+		_stop = true;
+		#else
+		trace("Code is unusued for the GB", StringTools.hex(_register[Register.pc] - 1), "please inspect me");
+		#end
+	}
 	function m_time(_m:Int, _t:Int) {
 		_register[Register.m] = _m;
 		_register[Register.t] = _t;
@@ -62,7 +75,19 @@ class CPU_GB
 	public function reset() {
 		_meminter = new Memory();
 		_clock = new Clock();
-		_register = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+		_register = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+		_rshadow = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+	}
+	function reset_shadow() {
+		_rshadow = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+	}
+	/**Return from Interupt*/
+	function reti() {
+		_register[Register.ime] = 1;
+		reset_shadow();
+		_register[Register.pc] = _meminter.read_word(_register[Register.sp]);
+		_register[Register.sp] += 2;
+		m_time(4, 14);
 	}
 	/**INC r*/
 	function inc(_reg:Int) {
@@ -176,11 +201,6 @@ class CPU_GB
 		_register[Register.f] = (_register[Register.f] & 0xEF) + co;
 		m_time(1, 4);
 	}
-	/**Halt and Catch Fire*/
-	function unused() {
-		trace("Code is unusued for the GB", StringTools.hex(_register[Register.pc] - 1), "stopping");
-		_stop = true;
-	}
 	/**Add HL,ss*/
 	function add_hlss(_high:Int, _low:Int) {
 		var hl = (_register[Register.h] << 8) + _register[Register.l];
@@ -201,6 +221,16 @@ class CPU_GB
 		_register[Register.l] = hl & 255;
 		m_time(3, 11);
 	}
+	/**ADD A,r*/
+	function add_ar(_reg:Int) {
+		var a = _register[_reg];
+		_register[Register.a] += _register[_reg];
+		_register[Register.f] = (_register[Register.a] > 255) ? 0x10 : 0;
+		_register[Register.a] &= 255;
+		if (_register[Register.a] == 0) _register[Register.f] |= 0x80;
+		if ((_register[Register.a] ^ _register[Register.b] ^ a) & 0x10 != 0) _register[Register.f] |= 0x20;
+		m_time(1, 4);
+	}
 	function write_map_table() 
 	{
 		_map[0x00] = nop;
@@ -211,7 +241,7 @@ class CPU_GB
 		_map[0x05] = dec.bind(Register.b);
 		_map[0x06] = load_rn.bind(Register.b);
 		_map[0x07] = rlca;
-		_map[0x08] = unused;
+		_map[0x08] = load_mmr.bind(Register.sp);
 		_map[0x09] = add_hlss.bind(Register.b, Register.c);
 		_map[0x0A] = load_rRRm.bind(Register.a, Register.b, Register.c);
 		_map[0x0B] = dec_rr.bind(Register.b, Register.c);
@@ -331,14 +361,14 @@ class CPU_GB
 		_map[0x7D] = load_rr.bind(Register.a, Register.l);
 		_map[0x7E] = load_rHLm.bind(Register.a);
 		_map[0x7F] = load_rr.bind(Register.a, Register.a);
-		_map[0x80] = nop;
-		_map[0x81] = nop;
-		_map[0x82] = nop;
-		_map[0x83] = nop;
-		_map[0x84] = nop;
-		_map[0x85] = nop;
+		_map[0x80] = add_ar.bind(Register.b);
+		_map[0x81] = add_ar.bind(Register.c);
+		_map[0x82] = add_ar.bind(Register.d);
+		_map[0x83] = add_ar.bind(Register.e);
+		_map[0x84] = add_ar.bind(Register.h);
+		_map[0x85] = add_ar.bind(Register.l);
 		_map[0x86] = nop;
-		_map[0x87] = nop;
+		_map[0x87] = add_ar.bind(Register.a);
 		_map[0x88] = nop;
 		_map[0x89] = nop;
 		_map[0x8A] = nop;
@@ -420,11 +450,11 @@ class CPU_GB
 		_map[0xD6] = nop;
 		_map[0xD7] = nop;
 		_map[0xD8] = nop;
-		_map[0xD9] = unused;
+		_map[0xD9] = reti;
 		_map[0xDA] = nop;
-		_map[0xDB] = nop;
+		_map[0xDB] = unused;
 		_map[0xDC] = nop;
-		_map[0xDD] = unused;
+		_map[0xDD] = nop; //needs to ve verified
 		_map[0xDE] = nop;
 		_map[0xDF] = nop;
 		_map[0xE0] = nop;

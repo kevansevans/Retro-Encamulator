@@ -18,4 +18,5 @@ enum abstract Register(Int) from Int {
 	var m:Int;
 	var i:Int;
 	var r:Int;
+	var ime:Int;
 }

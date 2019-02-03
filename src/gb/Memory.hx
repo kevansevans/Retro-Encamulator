@@ -112,10 +112,12 @@ class Memory {
 		return 0;
 	}
 	public function read_word(_addr):Int {
-		return 0;
+		return read_byte(_addr) + (read_byte(_addr + 1) << 8);
 	}
 	public function write_byte(_addr, _value) {
 		
 	}
-	public function write_word(_addr, _value) {}
+	public function write_word(_addr, _value) {
+		
+	}
 }
