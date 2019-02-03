@@ -4,6 +4,12 @@ package gb;
  * ...
  * @author Kaelan
  */
+enum abstract Bank(Int) from Int {
+	var rom:Int;
+	var ram:Int;
+	var ramon:Int;
+	var mode:Int;
+}
 class Memory {
 	public var _inbios:Bool = true;
 	var _ie:Int = 0;
@@ -15,6 +21,7 @@ class Memory {
 	var _eram:Map<Int, Int> = new Map();
 	var _wram:Map<Int, Int> = new Map();
 	var _zram:Map<Int, Int> = new Map();
+	var _mbc:Array<Int> = [0, 0, 0, 0];
 	public var _bios:Array<Int> = [
     0x31, 0xFE, 0xFF, 0xAF, 0x21, 0xFF, 0x9F, 0x32, 0xCB, 0x7C, 0x20, 0xFB, 0x21, 0x26, 0xFF, 0x0E,
     0x11, 0x3E, 0x80, 0x32, 0xE2, 0x0C, 0x3E, 0xF3, 0xE2, 0x32, 0x3E, 0x77, 0x77, 0x3E, 0xFC, 0xE0,
@@ -115,9 +122,73 @@ class Memory {
 		return read_byte(_addr) + (read_byte(_addr + 1) << 8);
 	}
 	public function write_byte(_addr, _value) {
-		
+		switch (_addr & 0xF000) {
+			case 0x0000 | 0x1000 :
+				switch (_carttype) {
+					case 1:
+						_mbc[Bank.ramon] = ((_value & 0xf) == 0xA) ? 1 : 0;
+				}
+			case 0x2000 | 0x3000 :
+				switch (_carttype) {
+					case 1:
+						_mbc[Bank.rom] &= 0x60;
+						_value &= 0x1F;
+						if (_value == 0) _value = 1;
+						_mbc[Bank.rom] |= _value;
+						_romoffset = _mbc[Bank.rom] * 0x4000;
+				}
+			case 0x4000 | 0x5000 :
+				switch(_carttype) {
+					case 1:
+						if (_mbc[Bank.mode] == 1) {
+							_mbc[Bank.ram] = _value & 3;
+							_ramoffset = _mbc[Bank.ram] * 0x2000;
+						} else {
+							_mbc[Bank.rom] &= 0x1F;
+							_mbc[Bank.rom] |= ((_value & 3) << 5);
+							_ramoffset = _mbc[Bank.rom] * 0x4000;
+						}
+				}
+			case 0x6000 | 0x7000 :
+				switch(_carttype) {
+					case 1:
+						_mbc[Bank.mode] = _value & 1;
+				}
+			case 0x8000 | 0x9000:
+				trace("Gpu write here");
+			case 0xA000 | 0xB000:
+				_eram[_ramoffset + (_addr & 0x1FFF)] = _value;
+			case 0xC000 | 0xD000 | 0xE000:
+				_wram[_addr & 0x1FFF] = _value;
+			case 0xF000 :
+				switch (_addr & 0x0F00) {
+					case 0x000 | 0x100 | 0x200 | 0x300 | 0x400 | 0x500 | 0x600 | 0x700 | 0x800 | 0x900 | 0xA00 | 0xB00 | 0xC00 | 0xD00:
+						_wram[_addr & 0x1FFF] = _value;
+					case 0xE00:
+						trace("gpu call here");
+					case 0xF00:
+						if (_addr == 0xFFFF) _ie = _value;
+						else if (_addr > 0xFF7F) _zram[_addr & 0x7F] = _value;
+						else switch(_addr & 0xF0) {
+							case 0x00 :
+								switch (_addr & 0xF) {
+									case 0:
+										trace("Key input I think");
+									case 4 | 5 | 6 | 7 :
+										trace("Timer code here");
+									case 15:
+										_if = _value;
+								}
+							case 0x10 | 0x20 | 0x30:
+								//do nothing here apparently
+							case 0x40 | 0x50 | 0x60 | 0x70 :
+								trace("Gpu call here");
+						}
+				}
+		}
 	}
 	public function write_word(_addr, _value) {
-		
+		write_byte(_addr, _value & 255);
+		write_byte(_addr + 1, _value >> 8);
 	}
 }
