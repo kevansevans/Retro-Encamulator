@@ -1,8 +1,15 @@
-package haxewell.gb;
+package haxewell.matrix;
 
 /**
+ * ...
  * @author Kaelan
  */
+enum abstract Bank(Int) from Int {
+	var rom:Int;
+	var ram:Int;
+	var ramon:Int;
+	var mode:Int;
+}
 enum abstract Register(Int) from Int {
 	var a:Int;
 	var b:Int;

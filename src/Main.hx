@@ -1,6 +1,6 @@
 package;
 
-import haxewell.gb.CPU_GB;
+import haxewell.matrix.Matrix;
 
 import sys.io.File;
 
@@ -13,11 +13,15 @@ enum abstract Argument(String) from String {
 	var TEST:String;
 	var SET:String;
 }
+enum abstract Mode(Int) from Int {
+	var Gameboy:Int;
+}
 class Main 
 {
-	static var gameboy:CPU_GB;
+	static var core:Null<Any> = null;
 	static var rom_path:Null<String>;
 	static var TAS_Mode:Bool = false;
+	static var _launch = Sys.args();
 	static function main() 
 	{
 		#if sys
@@ -25,8 +29,17 @@ class Main
 		Sys.println("Alpha version. Not recommended for use.");
 		Sys.println("HRE is only for backend emulation. Users are encouraged to create their own renderer to utilize the HRE cores.");
 		Sys.println("HRE is built on Haxe, so wherever Haxe can deploy, so can HRE.");
-		read_command();
 		#end
+		
+		if (_launch[0] == null) {
+			read_command();
+		} else {
+			var gb:Int = _launch[0].lastIndexOf(".gb");
+			
+			if (gb != -1) {
+				core = new Matrix(File.getContent(_launch[0]));
+			}
+		}
 	}
 	static function read_command() {
 		while (true) {
@@ -41,15 +54,14 @@ class Main
 	{
 		switch (_command.toUpperCase()) {
 			case Argument.RUN :
-				if (rom_path == null) {
-					Sys.println("ROM Not set");
+				if (core == null) {
+					Sys.println("Core not set");
 					read_command();
 				} else {
-					launch_emulator();
+					
 				}
 			case Argument.TEST :
-				Sys.println("Launching test rom...");
-				test_mode();
+				read_command();
 			case Argument.SET :
 				while (true) {
 					Sys.print("Path to Rom: > ");
@@ -61,45 +73,6 @@ class Main
 			default :
 				Sys.println("Unknown command");
 				read_command();
-		}
-	}
-	
-	static function launch_emulator() 
-	{
-		gameboy = new CPU_GB();
-		gameboy._memory.load(File.getContent(rom_path));
-		if (!TAS_Mode) {
-			gameboy.run();
-		} else {
-			step_mode();
-		}
-	}
-	static function test_mode() {
-		gameboy = new CPU_GB();
-		Sys.println("testing op codes...");
-		Sys.sleep(5);
-		for (a in 0...256) {
-			gameboy.step(a);
-			Sys.sleep(0.125);
-		}
-		Sys.println("End Result should be: ");
-		Sys.println("Testing bios in 10 seconds...");
-		Sys.sleep(10);
-		gameboy.reset();
-		Sys.println("testing bios...");
-		for (a in gameboy._memory._bios) {
-			gameboy.step(a);
-			Sys.sleep(0.125);
-		}
-		Sys.println("End Result should be: ");
-		Sys.println("Loading test roms in 10 seconds...");
-		Sys.sleep(10);
-		read_command();
-	}
-	static function step_mode() 
-	{
-		while (true) {
-			//Sys.stdin().readAll
 		}
 	}
 }

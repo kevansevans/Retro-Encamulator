@@ -1,15 +1,12 @@
-package haxewell.gb;
+package haxewell.matrix;
+
+import haxewell.matrix.Keys.Register;
+import haxewell.matrix.Keys.Bank;
 
 /**
  * ...
  * @author Kaelan
- */
-enum abstract Bank(Int) from Int {
-	var rom:Int;
-	var ram:Int;
-	var ramon:Int;
-	var mode:Int;
-}
+ */ 
 class Memory {
 	public var _inbios:Bool = true;
 	var _ie:Int = 0;
@@ -42,11 +39,8 @@ class Memory {
 	];
 	public function new() {
 		for (a in 0...8192) {_wram[a] = 0; }
-		trace("Wram good");
 		for (b in 0...32768) {_eram[b] = 0; }
-		trace("Eram good");
 		for (a in 0...127) {_zram[a] = 0; }
-		trace("Zram good");
 	}
 	public function load(_romdata:String) {
 		_rom = _romdata;
@@ -56,7 +50,7 @@ class Memory {
 			case 0x0000 :
 				if (_inbios) {
 					if (_addr < 0x0100) return _bios[_addr];
-					else if (CPU_GB._register[Register.pc] == 0x100) {
+					else if (Matrix.processor._register[Register.pc] == 0x100) {
 						_inbios = false;
 						trace("Leaving Bios");
 					}

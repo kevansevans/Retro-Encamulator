@@ -1,8 +1,7 @@
-package haxewell.gb;
+package haxewell.matrix;
 
 import haxe.Constraints.Function;
-import haxewell.gb.Register;
-
+import haxewell.matrix.Keys.Register;
 /**
  * ...
  * @author Kaelan
@@ -10,15 +9,13 @@ import haxewell.gb.Register;
  * made following tutorial: http://imrannazar.com/GameBoy-Emulation-in-JavaScript:-The-CPU
  * 
  */
-class CPU_GB 
+class CPU 
 {
-	public static var _clock:Clock;
-	public static var _register:Array<Int>;
-	public static var _rshadow:Array<Int>;
+	public var _clock:Clock;
+	public var _register:Array<Int>;
+	public var _rshadow:Array<Int>;
 	var op:Int = 0;
-	var ignore_false_nop = #if debug true #else false #end;
-	public var _memory:Memory;
-	public var _map:Map<Int, Function> = new Map();
+	var _map:Map<Int, Function> = new Map();
 	var _halt:Bool = false;
 	var _stop:Bool = false;
 	public function new() 
@@ -26,7 +23,6 @@ class CPU_GB
 		_clock = new Clock();
 		_register = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
 		_rshadow = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
-		_memory = new Memory();
 		write_map_table();
 	}
 	public function run() 
@@ -36,7 +32,7 @@ class CPU_GB
 		}
 	}
 	public function step(?_code:Int) {
-		op = (_memory.read_byte(++_register[Register.pc])); 
+		op = (Matrix.memory.read_byte(++_register[Register.pc])); 
 		op &= 255; //bitwise and to set value to unsigned
 		if (_code != null) op = _code;
 		if (_map[op] == null) throw "Null function pointer at: " + op + " " + _clock.m; //take this out when needed
@@ -50,7 +46,6 @@ class CPU_GB
 	}
 	/**No Operation*/
 	function nop() {
-		if (op != 0 && !ignore_false_nop) throw "Op code not set, please check: " + StringTools.hex(op);
 		_register[Register.m] = 1; _register[Register.t] = 4;
 	}
 	/**Halt*/
@@ -72,7 +67,7 @@ class CPU_GB
 		_register[Register.t] = _t;
 	}
 	public function reset() {
-		_memory = new Memory();
+		Matrix.memory = new Memory();
 		_clock = new Clock();
 		_register = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
 		_rshadow = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
@@ -84,7 +79,7 @@ class CPU_GB
 	function reti() {
 		_register[Register.ime] = 1;
 		reset_shadow();
-		_register[Register.pc] = _memory.read_word(_register[Register.sp]);
+		_register[Register.pc] = Matrix.memory.read_word(_register[Register.sp]);
 		_register[Register.sp] += 2;
 		m_time(4, 14);
 	}
@@ -132,66 +127,66 @@ class CPU_GB
 	/**LD r,(HL)*/
 	function load_rHLm(_reg:Int) {
 		var hl = (_register[Register.h] << 8) + _register[Register.l];
-		var val = _memory.read_byte(hl);
+		var val = Matrix.memory.read_byte(hl);
 		_register[_reg] = val;
 		m_time(2, 7);
 	}
 	/**LD (HL),r*/
 	function load_HLmr(_reg:Int) {
 		var hl = (_register[Register.h] << 8) + _register[Register.l];
-		_memory.write_byte(hl, _register[_reg]);
+		Matrix.memory.write_byte(hl, _register[_reg]);
 		m_time(2, 7);
 	}
 	/**LD r,n*/
 	function load_rn(_reg:Int) {
-		var byte = _memory.read_byte(_register[Register.pc]);
+		var byte = Matrix.memory.read_byte(_register[Register.pc]);
 		_register[_reg] = byte;
 		_register[Register.pc] += 1;
 		m_time(2, 7);
 	}
 	/**LD (HL), n*/
 	function load_hlmn() {
-		var byte = _memory.read_byte(_register[Register.pc]);
+		var byte = Matrix.memory.read_byte(_register[Register.pc]);
 		var hl = (_register[Register.h] << 8) + _register[Register.l];
-		_memory.write_byte(hl, byte);
+		Matrix.memory.write_byte(hl, byte);
 		_register[Register.pc] += 1;
 		m_time(3, 10);
 	}
 	/**LD (dd),r*/
 	function load_rrma(_high:Int, _low:Int, _reg:Int) {
 		var byte = (_register[_high] << 8) + _register[_low];
-		_memory.write_byte(byte, _register[_reg]);
+		Matrix.memory.write_byte(byte, _register[_reg]);
 		m_time(2, 7);
 	}
 	/**LD n,r*/
 	function load_mmr(_reg:Int) {
-		_memory.write_byte(_memory.read_word(_register[Register.pc]), _register[Register.a]);
+		Matrix.memory.write_byte(Matrix.memory.read_word(_register[Register.pc]), _register[Register.a]);
 		_register[Register.pc] += 2;
 		m_time(4, 13);
 	}
 	/**LD r, nn*/
 	function load_rRRm(_reg:Int, _high:Int, _low:Int) {
 		var byte = (_register[_high] << 8) + _register[_low];
-		_register[_reg] = _memory.read_byte(byte);
+		_register[_reg] = Matrix.memory.read_byte(byte);
 		m_time(2, 7);
 	}
 	/**LD dd, (nn)*/
 	function load_rrnn(_high:Int, _low:Int) {
-		_register[_low] = _memory.read_byte(_register[Register.pc]);
-		_register[_high] = _memory.read_byte(_register[Register.pc + 1]);
+		_register[_low] = Matrix.memory.read_byte(_register[Register.pc]);
+		_register[_high] = Matrix.memory.read_byte(_register[Register.pc + 1]);
 		_register[Register.pc] += 2;
 		m_time(2, 10);
 	}
 	/**LDI (HL+),a*/
 	function load_iHLa() {
-		_memory.write_byte((_register[Register.h] << 8) + _register[Register.l], _register[Register.a]);
+		Matrix.memory.write_byte((_register[Register.h] << 8) + _register[Register.l], _register[Register.a]);
 		_register[Register.l] = (_register[Register.l] + 1) & 255;
 		if (_register[Register.l] == 0) _register[Register.h] = (_register[Register.h]) & 255;
 		m_time(1, 8);
 	}
 	/**LDI a,(HL+)*/
 	function load_aHLi() {
-		_register[Register.a] = _memory.read_byte((_register[Register.h] << 8) + _register[Register.l]);
+		_register[Register.a] = Matrix.memory.read_byte((_register[Register.h] << 8) + _register[Register.l]);
 		_register[Register.l] = (_register[Register.l] + 1) & 255;
 		if (_register[Register.l] == 0) _register[Register.h] = (_register[Register.h]) & 255;
 		m_time(1, 8);
@@ -264,7 +259,7 @@ class CPU_GB
 	}
 	/**JR n*/
 	function jump_n() {
-		var i = _memory.read_byte(_register[Register.pc]);
+		var i = Matrix.memory.read_byte(_register[Register.pc]);
 		if (i > 127) i -= ((~i + 1) & 255);
 		_register[Register.pc] += 1;
 		_register[Register.pc] += i;
@@ -272,7 +267,7 @@ class CPU_GB
 	}
 	/**JR NZ,e*/
 	function jump_NZe() {
-		var i = _memory.read_byte(_register[Register.pc]);
+		var i = Matrix.memory.read_byte(_register[Register.pc]);
 		if (i > 127) i -= ((~i + 1) & 255);
 		_register[Register.pc] += 1;
 		m_time(2, 7);
