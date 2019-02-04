@@ -1,7 +1,7 @@
-package gb;
+package haxewell.gb;
 
 import haxe.Constraints.Function;
-import gb.Register;
+import haxewell.gb.Register;
 
 /**
  * ...

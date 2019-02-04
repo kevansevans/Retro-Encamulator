@@ -1,6 +1,6 @@
 package;
 
-import gb.CPU_GB;
+import haxewell.gb.CPU_GB;
 
 import sys.io.File;
 

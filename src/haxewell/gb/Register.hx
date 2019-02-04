@@ -1,4 +1,4 @@
-package gb;
+package haxewell.gb;
 
 /**
  * @author Kaelan
