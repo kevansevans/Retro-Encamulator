@@ -41,52 +41,52 @@ class Register
 	//////
 	//Single registers
 	/////
-	public function set_A(_byte:Int) {
+	function set_A(_byte:Int) {
 		A = _byte;
 		A &= 0xFF;
 		return A;
 	}
-	public function set_B(_byte:Int) {
+	function set_B(_byte:Int) {
 		B = _byte;
 		B &= 0xFF;
 		return B;
 	}
-	public function set_C(_byte:Int) {
+	function set_C(_byte:Int) {
 		C = _byte;
 		C &= 0xFF;
 		return C;
 	}
-	public function set_D(_byte:Int) {
+	function set_D(_byte:Int) {
 		D = _byte;
 		D &= 0xFF;
 		return D;
 	}
-	public function set_E(_byte:Int) {
+	function set_E(_byte:Int) {
 		E = _byte;
 		E &= 0xFF;
 		return E;
 	}
-	public function set_F(_byte:Int) {
+	function set_F(_byte:Int) {
 		F = _byte;
 		F &= 0xFF;
 		return F;
 	}
-	public function set_H(_byte:Int) {
+	function set_H(_byte:Int) {
 		H = _byte;
 		H &= 0xFF;
 		return H;
 	}
-	public function set_L(_byte:Int) {
+	function set_L(_byte:Int) {
 		L = _byte;
 		L &= 0xFF;
 		return L;
 	}
-	public function set_SP(_v:Int) {
+	function set_SP(_v:Int) {
 		SP = _v;
 		SP &= 0xFFFF;
 		return SP;
 	}
-	public function set_PC(_v:Int) {
+	function set_PC(_v:Int) {
 		PC = _v;
 		PC &= 0xFFFF;
 		return PC;
@@ -94,34 +94,34 @@ class Register
 	//////
 	//Register Pairs
 	/////
-	public function get_AF():Int {
+	function get_AF():Int {
 		return (A << 8) + F;
 	}
-	public function set_AF(_word:Int):Int {
+	function set_AF(_word:Int):Int {
 		A = (_word >> 8) & 0xFF;
 		F = _word & 0xFF;
 		return AF;
 	}
-	public function get_BC():Int {
+	function get_BC():Int {
 		return (B << 8) + C;
 	}
-	public function set_BC(_word:Int):Int {
+	function set_BC(_word:Int):Int {
 		B = (_word >> 8) & 0xFF;
 		C = _word & 0xFF;
 		return BC;
 	}
-	public function get_DE():Int {
+	function get_DE():Int {
 		return (D << 8) + E;
 	}
-	public function set_DE(_word:Int):Int {
+	function set_DE(_word:Int):Int {
 		D = (_word >> 8) & 0xFF;
 		E = _word & 0xFF;
 		return DE;
 	}
-	public function get_HL():Int {
+	function get_HL():Int {
 		return (H << 8) + L;
 	}
-	public function set_HL(_word:Int):Int {
+	function set_HL(_word:Int):Int {
 		H = (_word >> 8) & 0xFF;
 		L = _word & 0xFF;
 		return AF;
