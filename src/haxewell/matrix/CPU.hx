@@ -39,11 +39,14 @@ class CPU
 	function write_map_table() 
 	{
 		for (a in 0...255) _map[a] = op0x00;
+		
+		_map[0x00] = op0x00;
 	}
 	function set_cycle(_m:Int, _t:Int) {
 		_cycle.m = _m;
 		_cycle.t = _t;
 	}
+	/**NOP*/
 	function op0x00() {
 		set_cycle(1, 4);
 	}
