@@ -14,8 +14,12 @@ class CPU
 	var _stop:Bool = false;
 	var _clock = { m:0, t:0 };
 	var _cycle = { m:0, t:0 };
-	public function new() 
+	var _register:Register;
+	var _memory:Memory;
+	public function new(_reg:Register, _mem:Memory) 
 	{
+		_register = _reg;
+		_memory = _mem;
 		write_map_table();
 	}
 	public function run() 
@@ -25,7 +29,7 @@ class CPU
 		}
 	}
 	public function step(?_code:Int) {
-		_opcode = Matrix.memory.read_byte(Matrix.register.PC++);
+		_opcode = Matrix.memory.read_byte(_register.PC++);
 		_opcode &= 0xFF;
 		#if debug
 		if (_map[_opcode] == null) _map[0x00]();
@@ -37,7 +41,7 @@ class CPU
 		_clock.t += _cycle.t;
 		#if debug
 		#if sys
-		Sys.println(Matrix.register.toString(true));
+		Sys.println(_register.toString(true));
 		#else
 		trace(Matrix.register.toString(true));
 		#end
@@ -48,6 +52,8 @@ class CPU
 		for (a in 0...255) _map[a] = op0x00;
 		
 		_map[0x00] = op0x00;
+		_map[0x01] = op0x01;
+		_map[0x02] = op0x02;
 	}
 	function set_cycle(_m:Int, _t:Int) {
 		_cycle.m = _m;
@@ -56,5 +62,20 @@ class CPU
 	/**NOP*/
 	function op0x00() {
 		set_cycle(1, 4);
+	}
+	/**LD BC, nn
+	 * Load 16-bit into BC*/
+	function op0x01() {
+		_register.BC = _memory.read_word(_register.PC);
+	}
+	/**LD (BC), A*
+	 * Save A to location BC*/
+	function op0x02() {
+		_memory.write_byte(_register.BC, _register.A);
+	}
+	/**INC BC
+	 * Incriment BC by 1*/
+	function op0x03() {
+		_register.BC += 1;
 	}
 }

@@ -1,6 +1,8 @@
 package;
 
 import haxewell.matrix.Matrix;
+import haxewell.matrix.Keys;
+import haxewell.matrix.Register;
 
 import sys.io.File;
 
@@ -12,6 +14,7 @@ enum abstract Argument(String) from String {
 	var RUN:String;
 	var TEST:String;
 	var SET:String;
+	var HELP:String;
 }
 enum abstract Mode(Int) from Int {
 	var Gameboy:Int;
@@ -29,8 +32,10 @@ class Main
 		Sys.println("Alpha version. Not recommended for use.");
 		Sys.println("HRE is only for backend emulation. Users are encouraged to create their own renderer to utilize the HRE cores.");
 		Sys.println("HRE is built on Haxe, so wherever Haxe can deploy, so can HRE.");
+		#if debug 
+		Sys.println("This version was compiled under the Debug flag. Performance will not be optimal."); 
 		#end
-		
+		#end
 		if (_launch[0] == null) {
 			read_command();
 		} else {
@@ -38,6 +43,9 @@ class Main
 			
 			if (gb != -1) {
 				core = new Matrix(File.getContent(_launch[0]));
+			} else {
+				Sys.println(_launch[0] + " Is and unrecognized rom type");
+				read_command();
 			}
 		}
 	}
@@ -55,8 +63,9 @@ class Main
 		switch (_command.toUpperCase()) {
 			case Argument.RUN :
 				if (core == null) {
-					Sys.println("Core not set");
-					read_command();
+					//Sys.println("Core not set");
+					//read_command();
+					core = new Matrix(File.getContent(rom_path));
 				} else {
 					
 				}
@@ -70,6 +79,13 @@ class Main
 					break;
 				}
 				read_command();
+			case Argument.HELP: 
+				Sys.print("To use HRE, close this application. Then drag supported ROM of choice onto executable.");
+				Sys.print("Supported roms are as follows: Gameboy");
+				Sys.print("List of commands: ");
+				Sys.print(" Core - Force core loading regardless of rom detected");
+				Sys.print(" Load - load ROM within program directory");
+				Sys.print(" Help [device] - List commands associated with device");
 			default :
 				Sys.println("Unknown command");
 				read_command();

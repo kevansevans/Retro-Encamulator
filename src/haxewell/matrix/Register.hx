@@ -3,8 +3,8 @@ package haxewell.matrix;
 /**
  * @author Kaelan
  * 
- * Register class is to ensure registers behave correctly without having to constantly rewrite bitwise operators and ensure their under/overflow behavior works from the get go
- * Register values are also values, allowing any other module in the emulator to access them without ugly and hacky public/public variables elsewhere that's not needed
+ * Register class is to ensure registers behave correctly without having to constantly 
+ * rewrite bitwise operators and ensure their under/overflow behavior works from the get go
  * 
  */
 
