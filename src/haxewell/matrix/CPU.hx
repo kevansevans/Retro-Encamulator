@@ -35,6 +35,13 @@ class CPU
 		else _map[_opcode]();
 		_clock.m += _cycle.m;
 		_clock.t += _cycle.t;
+		#if debug
+		#if sys
+		Sys.println(Matrix.register.toString(true));
+		#else
+		trace(Matrix.register.toString(true));
+		#end
+		#end
 	}
 	function write_map_table() 
 	{
