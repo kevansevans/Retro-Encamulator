@@ -15,7 +15,7 @@ class CPU
 	public var _register:Array<Int>;
 	public var _rshadow:Array<Int>;
 	var op:Int = 0;
-	var _map:Map<Int, Function> = new Map();
+	var _map:Map<Int, Void -> Void> = new Map();
 	var _halt:Bool = false;
 	var _stop:Bool = false;
 	public function new() 
