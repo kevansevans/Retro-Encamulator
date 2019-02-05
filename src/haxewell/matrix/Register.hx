@@ -126,8 +126,12 @@ class Register
 		L = _word & 0xFF;
 		return AF;
 	}
-	public function toString():String {
-		return("A: " + A + "," + "B: " + B + "," + "C: " + C + "," + "D: " + D + "," + "E: " + E + "," + "F: " + F + "," + "H: " + H + "," + "L: " + L);
+	public function toString(_asHex:Bool = false):String {
+		if (_asHex) {
+			return("A: " + StringTools.hex(A, 2) + "," + "B: " + StringTools.hex(B, 2) + "," + "C: " + StringTools.hex(C, 2) + "," + "D: " + StringTools.hex(D, 2) + "," + "E: " + StringTools.hex(E, 2) + "," + "F: " + StringTools.hex(F, 2) + "," + "H: " + StringTools.hex(H, 2) + "," + "L: " + StringTools.hex(L, 2));
+		} else {
+			return("A: " + A + "," + "B: " + B + "," + "C: " + C + "," + "D: " + D + "," + "E: " + E + "," + "F: " + F + "," + "H: " + H + "," + "L: " + L);
+		}
 	}
 	public function reset() {
 		A = 0;
