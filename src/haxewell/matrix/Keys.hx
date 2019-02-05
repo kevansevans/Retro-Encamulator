@@ -10,7 +10,7 @@ enum abstract Bank(Int) from Int {
 	var ramon:Int;
 	var mode:Int;
 }
-enum abstract Register(Int) from Int {
+enum abstract Reg(Int) from Int {
 	var a:Int;
 	var b:Int;
 	var c:Int;

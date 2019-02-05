@@ -1,6 +1,6 @@
 package haxewell.matrix;
 
-import haxewell.matrix.Keys.Register;
+import haxewell.matrix.Keys.Reg;
 import haxewell.matrix.Keys.Bank;
 
 /**
@@ -50,7 +50,7 @@ class Memory {
 			case 0x0000 :
 				if (_inbios) {
 					if (_addr < 0x0100) return _bios[_addr];
-					else if (Matrix.processor._register[Register.pc] == 0x100) {
+					else if (Matrix.processor._register[Reg.pc] == 0x100) {
 						_inbios = false;
 						trace("Leaving Bios");
 					}
