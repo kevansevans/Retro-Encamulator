@@ -41,9 +41,9 @@ class CPU
 		_clock.t += _cycle.t;
 		#if debug
 		#if sys
-		Sys.println(_register.toString(true));
+		Sys.println("OP: " + StringTools.hex(_opcode, 2) + ", " + _register.toString(true));
 		#else
-		trace(Matrix.register.toString(true));
+		trace("OP: " + StringTools.hex(_opcode, 2), Matrix.register.toString(true));
 		#end
 		#end
 	}
