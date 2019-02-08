@@ -8,6 +8,7 @@ package haxewell.matrix;
  */
 class CPU 
 {
+	var _running = true;
 	var _opcode:Int = 0;
 	var _map:Map<Int, Void -> Void> = new Map();
 	var _halt:Bool = false;
@@ -24,7 +25,7 @@ class CPU
 	}
 	public function run() 
 	{
-		while (true) {
+		while (_running) {
 			step();
 		}
 	}
@@ -34,7 +35,10 @@ class CPU
 		#if debug
 		if (_map[_opcode] == null) _map[0x00]();
 		#else
-		if (_map[_opcode] == null) throw "Illegal op code executed! " + StringTools.hex(_opcode, 2) + ", if this is not meant to happen, get ahold of a developer!";
+		if (_map[_opcode] == null) {
+			_running = false;
+			Sys.println("Illegal op code executed! " + StringTools.hex(_opcode, 2) + " Matrix core HCF. If this is not meant to happen, get ahold of a developer!");
+		}
 		#end
 		else _map[_opcode]();
 		_clock.m += _cycle.m;

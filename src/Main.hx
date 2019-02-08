@@ -1,8 +1,7 @@
 package;
 
+import haxewell.EmuCore;
 import haxewell.matrix.Matrix;
-import haxewell.matrix.Keys;
-import haxewell.matrix.Register;
 
 import sys.io.File;
 
@@ -21,9 +20,8 @@ enum abstract Mode(Int) from Int {
 }
 class Main 
 {
-	static var core:Null<Any> = null;
+	static var core:EmuCore = null;
 	static var rom_path:Null<String>;
-	static var TAS_Mode:Bool = false;
 	static var _launch = Sys.args();
 	static function main() 
 	{
@@ -39,14 +37,7 @@ class Main
 		if (_launch[0] == null) {
 			read_command();
 		} else {
-			var gb:Int = _launch[0].lastIndexOf(".gb");
-			
-			if (gb != -1) {
-				core = new Matrix(File.getContent(_launch[0]));
-			} else {
-				Sys.println(_launch[0] + " Is and unrecognized rom type");
-				read_command();
-			}
+			get_rom_type(_launch[0]);
 		}
 	}
 	static function read_command() {
@@ -57,17 +48,41 @@ class Main
 			break;
 		}
 	}
-	
+	static function get_rom_type(_rom:String) {
+		var ext_2 = _rom.substr(_rom.length - 3, _rom.length);
+		var ext_3 = _rom.substr(_rom.length - 4, _rom.length);
+		var detected = false;
+		if (ext_2 == ".gb") {
+			core = new Matrix(File.getContent(_rom));
+			Sys.println("Rom set to: " + rom_path);
+			Sys.println(_rom + " Is detected as a Gameboy ROM, Matrix core has been loaded");
+			Sys.println("Use command 'RUN' to start EMU"); 
+			detected = true;
+			read_command();
+		}
+		if (ext_3 == ".gbc") {
+			core = new Matrix(File.getContent(_rom));
+			Sys.println("Rom set to: " + rom_path);
+			Sys.println(_rom + " Is detected as a Gameboy Color ROM, Matrix core has been loaded");
+			Sys.println("Use command 'RUN' to start EMU");
+			detected = true;
+			read_command();
+		} 
+		if (!detected) {
+			Sys.println(_rom + " Is and unrecognized rom type");
+			Sys.println("Use command 'SET' to try setting ROM again");
+		}
+		read_command();
+	}
 	static function process(_command:String) 
 	{
 		switch (_command.toUpperCase()) {
 			case Argument.RUN :
-				if (core == null) {
-					//Sys.println("Core not set");
-					//read_command();
-					core = new Matrix(File.getContent(rom_path));
+				if (core != null) {
+					core.start();
 				} else {
-					
+					Sys.println("Core not set");
+					read_command();
 				}
 			case Argument.TEST :
 				read_command();
@@ -75,9 +90,9 @@ class Main
 				while (true) {
 					Sys.print("Path to Rom: > ");
 					rom_path = Sys.stdin().readLine();
-					Sys.println("Rom set to: " + rom_path);
 					break;
 				}
+				get_rom_type(rom_path);
 				read_command();
 			case Argument.HELP: 
 				Sys.print("To use HRE, close this application. Then drag supported ROM of choice onto executable.");

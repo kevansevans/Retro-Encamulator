@@ -1,4 +1,5 @@
 package haxewell.matrix;
+import haxewell.EmuCore;
 
 /**
  * ...
@@ -7,7 +8,7 @@ package haxewell.matrix;
  * Matrix core: Gameboy Emulator
  * 
  */
-class Matrix
+class Matrix extends EmuCore
 {
 	public static var processor:CPU;
 	public static var memory:Memory;
@@ -16,6 +17,7 @@ class Matrix
 	public static var register:Register;
 	public function new(_rom:String) 
 	{
+		super();
 		register = new Register();
 		memory = new Memory();
 		memory.load(_rom);
@@ -23,6 +25,8 @@ class Matrix
 		sound = new Sound();
 		
 		processor = new CPU(register, memory);
+	}
+	override public function start() {
 		processor.run();
 	}
 }
