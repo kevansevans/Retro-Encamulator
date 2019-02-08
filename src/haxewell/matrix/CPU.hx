@@ -85,6 +85,23 @@ class CPU
 		_map[0x1D] = op0x1D;
 		_map[0x1E] = op0x1E;
 		_map[0x1F] = op0x1F;
+		//20
+		_map[0x20] = op0x20;
+		_map[0x21] = op0x21;
+		_map[0x22] = op0x22;
+		_map[0x23] = op0x23;
+		_map[0x24] = op0x24;
+		_map[0x25] = op0x25;
+		_map[0x26] = op0x26;
+		_map[0x27] = op0x27;
+		_map[0x28] = op0x28;
+		_map[0x29] = op0x29;
+		_map[0x2A] = op0x2A;
+		_map[0x2B] = op0x2B;
+		_map[0x2C] = op0x2C;
+		_map[0x2D] = op0x2D;
+		_map[0x2E] = op0x2E;
+		_map[0x2F] = op0x2F;
 	}
 	function set_cycle(_m:Int, _t:Int) {
 		_cycle.m = _m;
@@ -303,4 +320,125 @@ class CPU
 	//////////////////
 	//OP code 20 -> 2F
 	//////////////////
+	/**JR NZ, n
+	 * Jump to relative sign if last result was not 0*/
+	function op0x20() {
+		var i = _memory.read_byte(_register.PC);
+		if (i > 127) i -= ((~i + 1) & 255);
+		_register.PC += 1;
+		set_cycle(2, 12);
+		if ((_register.F & 0x80) == 0) {
+			_register.PC += i;
+			set_cycle(2, 20);
+		}
+	}
+	/**LD HL, nn
+	 * Load 16 bit value at nn into HL*/
+	function op0x21() {
+		_register.HL = _memory.read_word(_register.PC);
+		set_cycle(3, 12);
+	}
+	/**LDI (HL), A
+	 * Load Register A into location HL and incriment HL by 1*/
+	function op0x22() {
+		_memory.write_byte(_register.HL, _register.A);
+		_register.HL += 1;
+		set_cycle(1, 8);
+	}
+	/**INC HL
+	 * Incriment Hl by 1*/
+	function op0x23() {
+		_register.HL += 1;
+		set_cycle(1, 8);
+	}
+	/**INC H
+	 * Incriment H by 1*/
+	function op0x24() {
+		_register.H += 1;
+		set_cycle(1, 4);
+	}
+	/**DEC H
+	 * Decrease H by 1*/
+	function op0x25() {
+		_register.H -= 1;
+		set_cycle(1, 4);
+	}
+	/**LD H, n
+	 * Load value located at n into H*/
+	function op0x26() {
+		_register.H = _memory.read_byte(_register.PC);
+		set_cycle(2, 8);
+	}
+	/**DAA
+	 * Adjust A for BCD addition*/
+	function op0x27() {
+		var a = _register.A;
+		if ((_register.F & 0x20 != 0) || (_register.A & 15) > 9) _register.A += 6;
+		_register.F &= 0xEF;
+		if ((_register.F & 0x20 != 0) || (a > 0x99)) {
+			_register.A += 0x60;
+			_register.F |= 0x10;
+		}
+		set_cycle(1, 4);
+	}
+	/**JR Z, n
+	 * Jump to relative sign if last result was 0*/
+	function op0x28() {
+		var i = _memory.read_byte(_register.PC);
+		if (i > 127) i -= ((~i + 1) & 255);
+		_register.PC += 1;
+		set_cycle(2, 12);
+		if ((_register.F & 0x80) == 0x80) {
+			_register.PC += i;
+			set_cycle(2, 20);
+		}
+	}
+	/**ADD HL, Hl
+	 * Add Hl to HL*/
+	function op0x29() {
+		//I'm confident you'd get the same effect as multiplying it by two or bitshifting it by one to the left, but if the instruction says Add, then it's getting added.
+		_register.HL += _register.HL;
+		set_cycle(1, 8);
+	}
+	/**LDI A, (HL)
+	 * Set A to value located at HL and incriment HL by one*/
+	function op0x2A() {
+		_register.A = _memory.read_byte(_register.HL);
+		_register.HL += 1;
+		set_cycle(1, 8);
+	}
+	/**DEC HL
+	 * Decrease HL by 1*/
+	function op0x2B() {
+		_register.HL -= 1;
+		set_cycle(1, 8);
+	}
+	/**INC L
+	 * Incriment L by 1*/
+	function op0x2C() {
+		_register.L += 1;
+		set_cycle(1, 4);
+	}
+	/**DEC L
+	 * Decrease L by 1*/
+	function op0x2D() {
+		_register.L -= 1;
+		set_cycle(1, 4);
+	}
+	/**LD L, n
+	 * Load value located at n into L*/
+	function op0x2E() {
+		_register.L = _memory.read_byte(_register.PC);
+		set_cycle(2, 8);
+	}
+	/**CPL
+	 * Component logic NOT on A*/
+	function op0x2F() {
+		_register.A ^= 0xFF;
+		_register.F = _register.A != 0 ? 0 : 0x80;
+		set_cycle(1, 4);
+	}
+	///////////////////
+	//OP Codes 30 -> 3F
+	///////////////////
 }
