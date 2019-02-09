@@ -106,6 +106,23 @@ class CPU
 		_map[0x2D] = op0x2D;
 		_map[0x2E] = op0x2E;
 		_map[0x2F] = op0x2F;
+		//30
+		_map[0x30] = op0x30;
+		_map[0x31] = op0x31;
+		_map[0x32] = op0x32;
+		_map[0x33] = op0x33;
+		_map[0x34] = op0x34;
+		_map[0x35] = op0x35;
+		_map[0x36] = op0x36;
+		_map[0x37] = op0x37;
+		_map[0x38] = op0x38;
+		_map[0x39] = op0x39;
+		_map[0x3A] = op0x3A;
+		_map[0x3B] = op0x3B;
+		_map[0x3C] = op0x3C;
+		_map[0x3D] = op0x3D;
+		_map[0x3E] = op0x3E;
+		_map[0x3F] = op0x3F;
 	}
 	function set_cycle(_m:Int, _t:Int) {
 		_cycle.m = _m;
@@ -215,7 +232,7 @@ class CPU
 		set_cycle(1, 4);
 	}
 	///////////////////
-	//OP codes 10 -> 1F
+	//OP Codes 10 -> 1F
 	///////////////////
 	/**Stop
 	 * Stop processor*/
@@ -272,7 +289,7 @@ class CPU
 	 * Jump to relative signed value*/
 	function op0x18() {
 		var i = _memory.read_byte(_register.PC); //get jump value
-		if (i > 127) i -= ((~i + 1) & 255); //Checking if we're jumping forward or backwards.
+		if (i > 127) i = -((~i + 1) & 255); //Checking if we're jumping forward or backwards.
 		_register.PC += (1 + i);
 		set_cycle(2, 12);
 	}
@@ -321,14 +338,14 @@ class CPU
 		_register.F = (_register.F & 0xEF) + co;
 		set_cycle(1, 4);
 	}
-	//////////////////
-	//OP code 20 -> 2F
-	//////////////////
+	///////////////////
+	//OP Codes 20 -> 2F
+	///////////////////
 	/**JR NZ, n
 	 * Jump to relative sign if last result was not 0*/
 	function op0x20() {
 		var i = _memory.read_byte(_register.PC);
-		if (i > 127) i -= ((~i + 1) & 255);
+		if (i > 127) i = -((~i + 1) & 255);
 		_register.PC += 1;
 		set_cycle(2, 12);
 		if ((_register.F & 0x80) == 0) {
@@ -389,7 +406,7 @@ class CPU
 	 * Jump to relative sign if last result was 0*/
 	function op0x28() {
 		var i = _memory.read_byte(_register.PC);
-		if (i > 127) i -= ((~i + 1) & 255);
+		if (i > 127) i = -((~i + 1) & 255);
 		_register.PC += 1;
 		set_cycle(2, 12);
 		if ((_register.F & 0x80) == 0x80) {
@@ -445,4 +462,115 @@ class CPU
 	///////////////////
 	//OP Codes 30 -> 3F
 	///////////////////
+	/**JR NC, n
+	 * Jump to relative sign if last op did not cause carry*/
+	function op0x30() {
+		var i = _memory.read_byte(_register.PC);
+		if (i > 127) i = -((~i + 1) & 255);
+		_register.PC += 1;
+		set_cycle(2, 12);
+		if ((_register.F & 0x10) == 0x00) {
+			_register.PC += i;
+			set_cycle(2, 20); 
+		}
+	}
+	/**LD SP, nn
+	 * Set SP to value located at nn*/
+	function op0x31() {
+		_register.SP = _memory.read_word(_register.PC);
+		set_cycle(3, 12);
+	}
+	/**LDD (hl), a
+	 * Save value of A to (hl) and decrease HL by 1*/
+	function op0x32() {
+		_memory.write_byte(_register.HL, _register.A);
+		_register.HL -= 1;
+		set_cycle(1, 8);
+	}
+	/**INC SP
+	 * Incriment SP by 1*/
+	function op0x33() {
+		_register.SP += 1;
+		set_cycle(1, 8);
+	}
+	/**INC (hl)
+	 * Increase value by one pointed at by hl*/
+	function op0x34() {
+		_memory.write_byte(_register.HL, _memory.read_byte(_register.HL) + 1);
+		set_cycle(1, 12);
+	}
+	/**DEC (hl)
+	 * Decrease value by one pointed at by hl*/
+	function op0x35() {
+		_memory.write_byte(_register.HL, _memory.read_byte(_register.HL) - 1);
+		set_cycle(1, 12);
+	}
+	/**LD (hl), n
+	 * Load value into location HL from location n*/
+	function op0x36() {
+		_memory.write_byte(_register.HL, _memory.read_byte(_register.PC));
+		set_cycle(2, 12);
+	}
+	/**SCF
+	 * Set carry flag*/
+	function op0x37() {
+		_register.F |= 0x10;
+		set_cycle(1, 4);
+	}
+	/**JR C, n,
+	 * Jump to relative signed register if last result was carry*/
+	function op0x38() {
+		var i = _memory.read_byte(_register.PC);
+		if (i > 127) i = -((~i + 1) & 255);
+		_register.PC += 1;
+		set_cycle(2, 12);
+		if ((_register.F & 0x10) != 0x00) {
+			_register.PC += i;
+			set_cycle(2, 20); 
+		}
+	}
+	/**ADD HL, SP
+	 * Add SP to HL*/
+	function op0x39() {
+		_register.HL += _register.SP;
+		set_cycle(1, 8);
+	}
+	/**LDD A, (HL)
+	 * Set A to value at HL, decrease HL by 1*/
+	function op0x3A() {
+		_register.A = _memory.read_byte(_register.HL);
+		_register.HL -= 1;
+		set_cycle(1, 8);
+	}
+	/**DEC SP
+	 * Decrease SP by 1*/
+	function op0x3B() {
+		_register.SP -= 1;
+		set_cycle(1, 8);
+	}
+	/**INC A
+	 * Increase A by 1*/
+	function op0x3C() {
+		_register.A += 1;
+		set_cycle(1, 4);
+	}
+	/**DEC A
+	 * Decrease A by 1*/
+	function op0x3D() {
+		_register.A -= 1;
+		set_cycle(1, 4);
+	}
+	/**LD A, n
+	 * Load value of location n into A*/
+	function op0x3E() {
+		_register.A = _memory.read_byte(_register.PC);
+		set_cycle(2, 8);
+	}
+	/**CCF
+	 * Clear carry flag*/
+	function op0x3F() {
+		var ci = _register.F & 0x10 != 0 ? 0 : 0x10;
+		_register.F = (_register.F & 0xEF) + ci;
+		set_cycle(1, 4);
+	}
 }
