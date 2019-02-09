@@ -1,2 +1,2 @@
 # HRE
-Haxewell Retro Encamulator - Gameboy Emulator built in Haxe
+Retro Encamulator - Multi-Core Emulator built in Haxe
