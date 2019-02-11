@@ -1,6 +1,6 @@
 package haxewell.matrix;
 
-import haxewell.matrix.Keys.Reg;
+import haxe.ds.Vector;
 import haxewell.matrix.Keys.Bank;
 
 /**
@@ -11,7 +11,6 @@ class Memory {
 	public var _inbios:Bool = true;
 	var _ie:Int = 0;
 	var _if:Int = 0;
-	var _rom:String = "";
 	var _romoffset = 0x4000;
 	var _ramoffset = 0;
 	var _carttype:Int = 0;
@@ -19,6 +18,7 @@ class Memory {
 	var _wram:Map<Int, Int> = new Map();
 	var _zram:Map<Int, Int> = new Map();
 	var _mbc:Array<Int> = [0, 0, 0, 0];
+	var _rom:Vector<Int>;
 	public var _bios:Array<Int> = [
     0x31, 0xFE, 0xFF, 0xAF, 0x21, 0xFF, 0x9F, 0x32, 0xCB, 0x7C, 0x20, 0xFB, 0x21, 0x26, 0xFF, 0x0E,
     0x11, 0x3E, 0x80, 0x32, 0xE2, 0x0C, 0x3E, 0xF3, 0xE2, 0x32, 0x3E, 0x77, 0x77, 0x3E, 0xFC, 0xE0,
@@ -43,7 +43,10 @@ class Memory {
 		for (a in 0...127) {_zram[a] = 0; }
 	}
 	public function load(_romdata:String) {
-		_rom = _romdata;
+		_rom = new Vector(_romdata.length);
+		for (a in 0..._romdata.length) {
+			_rom[a] = _romdata.charCodeAt(a);
+		}
 	}
 	public function read_byte(_addr:Int):Int {
 		switch(_addr & 0xF000) {
@@ -55,13 +58,13 @@ class Memory {
 						trace("Leaving Bios");
 					}
 				} else {
-					return _rom.charCodeAt(_addr);
+					return _rom[_addr];
 				}
 			case 0x1000 | 0x2000 | 0x3000 :
-				return _rom.charCodeAt(_addr);
+				return _rom[_addr];
 			//rom bank 1
 			case 0x4000 | 0x5000 | 0x6000 | 0x7000 :
-				return _rom.charCodeAt(_romoffset + (_addr & 0x3FFF));
+				return _rom[(_romoffset + (_addr & 0x3FFF))];
 			//vram	
 			case 0x8000 | 0x9000 :
 				trace("I don't have a GPU yet!");
